@@ -8,6 +8,10 @@ allprojects {
    apply plugin: 'java'
    repositories { flatDir(dirs:"$projectDir/../lib"); mavenCentral() }
 }
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 ext {
   def proc = "git rev-parse --short HEAD".execute()
