@@ -14,6 +14,7 @@ import org.w3c.dom.Element;
 
 import htsjdk.samtools.AbstractSAMHeaderRecord;
 import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.samtools.SAMSequenceRecord;
 
@@ -47,14 +48,14 @@ public class XmlUtils {
 
         //<HeadRecords Category="SQ" Describe="Sequence">
         //<HeadRecord>@SQ       SN:chr1 LN:249250621</HeadRecord>
-        createHeaderRecords(parent,cateName,  "SQ", "sequences", header.getSequenceDictionary().getSequences());
+        createHeaderRecords(parent,cateName,  "SQ", "Reference sequence dictionary", header.getSequenceDictionary().getSequences());
 
         //RG
-        createHeaderRecords(parent, cateName, "RG", "read groups", header.getReadGroups());
+        createHeaderRecords(parent, cateName, "RG", "Read group", header.getReadGroups());
         //PG
-        createHeaderRecords(parent, cateName, "PG", "program records", header.getProgramRecords());
+        createHeaderRecords(parent, cateName, "PG", "Program", header.getProgramRecords());
         //CO
-        createHeaderRecords(parent, cateName, "CO", "comment lines", header.getComments());
+        createHeaderRecords(parent, cateName, "CO", "Text comment", header.getComments());
     }
 
     private static <T> void createHeaderRecords(Element parent, String cateName, String cateValue, String des, List<T > records) {
@@ -75,10 +76,11 @@ public class XmlUtils {
                             //set id
                             if (re instanceof SAMSequenceRecord) {
                                     elechild.setAttribute("id", ((SAMSequenceRecord)re).getSequenceName()  );
-                            }else if (re instanceof SAMReadGroupRecord)
+                            }else if (re instanceof SAMReadGroupRecord) {
                                     elechild.setAttribute("id", ((SAMReadGroupRecord)re).getId()  );
-                            else if(re instanceof VcfHeaderRecord) {
-
+                            }else if (re instanceof SAMProgramRecord) {
+                                elechild.setAttribute("id", ((SAMProgramRecord)re).getId()  );
+                            }else if(re instanceof VcfHeaderRecord) {
                                     elechild.setAttribute("id",((VcfHeaderRecord) re).getId() != null ? ((VcfHeaderRecord) re).getId(): ((VcfHeaderRecord) re).getMetaKey().replace("##", "") );
                             }
                             element.appendChild(elechild);
