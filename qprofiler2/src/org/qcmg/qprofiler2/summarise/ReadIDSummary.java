@@ -1,14 +1,10 @@
 package org.qcmg.qprofiler2.summarise;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.qcmg.common.util.QprofilerXmlUtils;
 import org.qcmg.common.util.TabTokenizer;
 import org.qcmg.qprofiler2.util.XmlUtils;
 import org.w3c.dom.Element;
@@ -23,6 +19,10 @@ public class ReadIDSummary {
 	ConcurrentMap<String, AtomicLong> tileNumbers = new ConcurrentHashMap<>();
 	ConcurrentMap<String, AtomicLong> invalidId = new ConcurrentHashMap<>();
 	Map<String, AtomicLong> pairs = new HashMap<>();
+	
+	//store 10 QNAME for eye testing
+	List<String> topQname = new ArrayList<>();
+	final int top = 10; 
 
 	AtomicLong filteredY = new AtomicLong();
 	AtomicLong filteredN = new AtomicLong();
@@ -49,6 +49,11 @@ public class ReadIDSummary {
 	 */
 	public void parseReadId(String readId) {
 		
+		//store 10 QNAME for eye testing
+		if(topQname.size() < top ) {
+			topQname.add(readId);
+		}
+				
 		inputNo.incrementAndGet();
 		try {		
 			if ( !readId.contains(":")) { parseBgiReads(readId); return; };				
@@ -112,6 +117,16 @@ public class ReadIDSummary {
 	}
 	
 	public long getInputReadNumber() {return inputNo.get();}
+	
+	/**
+	 * append stored qname under input element
+	 * @param element is the parent node
+	 */
+	public void outputQname(Element element){
+		for(String qname : topQname) {			
+			XmlUtils.outputValueNode(element, qname, 1);
+		}		
+	}
 		
 	public void toXml(Element element){		
 		// header breakdown		

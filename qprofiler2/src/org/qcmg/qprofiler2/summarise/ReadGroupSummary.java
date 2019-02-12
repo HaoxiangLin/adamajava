@@ -22,23 +22,29 @@ public class ReadGroupSummary {
 	public final static String node_trim = "trimmedBases";	
 	public final static String node_hardClip = "hardClippedBases";
 	public final static String node_readLength = "readLength" ; 
-	public final static String node_overlap = "overlapBases";	
+	public final static String node_overlap = "overlappedBases";	
 	public final static String node_duplicate = "duplicateReads";
 	public final static String node_secondary = "secondary";
 	public final static String node_supplementary = "supplementary"; 	
 	public final static String node_unmapped = "unmappedReads";
-	public final static String node_nonCanonicalPair = "nonCanonicalPair";
+	public final static String node_nonCanonicalPair = "nonCanonicalPairs";
 	public final static String node_failedVendorQuality = "failedVendorQuality";
 	public final static String modal_isize = "modalSize";
 		
 	public final static String smin= "min";	
 	public final static String smax = "max";
-	public final static String smean = "mean"; 
-	public final static String smode =  "mode"; 
-	public final static String smedian = "median" ; 
+	//debug
+	//for sequenceMetrics::"paris"/variableGroup::tlen
+	public final static String smean = "meanUnderTlen5000"; 
+	public final static String smode =  "modeUnderTlen5000"; 
+	public final static String smedian = "medianUnderTlen5000" ; 
+	public final static String stdDev = "stdDevnUnderTlen5000" ; 
+	public final static String pairCount = "pairCountUnderTlen5000" ; 
+	
 	public final static String sreadCount = "readCount"; 
-	public final static String slostBase = "lostBase"; 
+	public final static String slostBase = "baseLost"; 
 	public final static String sbasePercent = "basePercent"; 
+	public static final String sbaseCount = "baseCount"; //"countedBase"
 	
 	//fixed value
 	public final static int bigTlenValue = 10000;
@@ -172,11 +178,11 @@ public class ReadGroupSummary {
 		
 		void toXml(Element parent  ){			
 			Element stats = XmlUtils.createGroupNode(parent, name);
-			XmlUtils.outputValueNode(stats, "overlapping", overlap.get());
-			stats.appendChild(stats.getOwnerDocument().createComment("below counts excluding overlapping pairs"));
-			XmlUtils.outputValueNode(stats, "tlenUnder1500", near.get() );		 
-			XmlUtils.outputValueNode(stats, "tlenOver10000", bigTlen.get()  );
-			XmlUtils.outputValueNode(stats, "tlenBetween1500And10000",far.get() );
+			XmlUtils.outputValueNode(stats, "overlappedPairs", overlap.get());
+			//stats.appendChild(stats.getOwnerDocument().createComment("below counts excluding overlapping pairs"));
+			XmlUtils.outputValueNode(stats, "tlenUnder1500Pairs", near.get() );		 
+			XmlUtils.outputValueNode(stats, "tlenOver10000Pairs", bigTlen.get()  );
+			XmlUtils.outputValueNode(stats, "tlenBetween1500And10000Pairs",far.get() );
 			XmlUtils.outputValueNode(stats, "pairCount", recordSum.get()  );
 			
 		}
@@ -384,7 +390,7 @@ public class ReadGroupSummary {
 		
 		 checkPrepare();						
 		//add to xml RG_Counts
-		Element rgElement = XmlUtils.createMetricsNode(parent,"reads", inputReadCounts.get());					
+		Element rgElement = XmlUtils.createMetricsNode(parent,"reads",null, inputReadCounts.get());					
 		//add discarded read Stats to readgroup summary		
 		Element ele = XmlUtils.createGroupNode(rgElement, QprofilerXmlUtils.discardReads );
 		XmlUtils.outputValueNode(ele, "supplementaryAlignmentCount", supplementary.get());
@@ -408,33 +414,40 @@ public class ReadGroupSummary {
 		lostBase += lostBaseStats( rgElement, node_softClip, softClip, this.maxBases );
 		lostBase += lostBaseStats( rgElement, node_hardClip, hardClip, this.maxBases );
 		lostBase += lostBaseStats( rgElement, node_overlap, overlapBase, this.maxBases );
-		XmlUtils.addCommentChild(( Element )rgElement.getLastChild(), "Only count overlaped base on one strand which have positive Tlen value!");
+		XmlUtils.addCommentChild(( Element )rgElement.getLastChild(), "Only count overlapped bases on strand for pairs which have a positive TLEN value.");
 		
 		
-		//add comments
-		String comment = "readCount: include duplicate, non-canonical paired and unmapped reads but excludes discared reads (failed, secondary and supplementary); ";
-		if( !readGroupId.equals(QprofilerXmlUtils.All_READGROUP) ) {
-			comment += "countedBase: readCount multipy readMaxLength;";		
-			comment += slostBase + ": sum of duplicate, non-canonical paired, unmapped read base and (hard/soft clipped ,trimmed and overlapped base); ";
-		}else {
-			comment += "countedBase: sum of countedBase from all read group; ";
-			comment += slostBase + ": sum of lostBase from all read group; ";
-		}
-		comment += QprofilerXmlUtils.lostPercent + ": lostBases divded by countedBase;";
-		rgElement.appendChild( rgElement.getOwnerDocument().createComment( comment) );
-		
-		//add overall information to current readgroup element		
-		double lostPercent =  this.maxBases == 0? 0: 100 * (double) lostBase / this.maxBases ;		
-		XmlUtils.outputValueNode( rgElement, sreadCount,  this.noOfCountedReads );
 		XmlUtils.outputValueNode( rgElement, "readMaxLength", this.maxReadLength  );
-		XmlUtils.outputValueNode( rgElement, "countedBase", this.maxBases  );		
-		XmlUtils.outputValueNode( rgElement, slostBase,  lostBase);			
+		
+		//readCount
+		String comment = sreadCount + ": includes duplicateReads, nonCanonicalPairs and unmappedReads but excludes discardedReads (failed, secondary and supplementary).";
+		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );				
+		XmlUtils.outputValueNode( rgElement, sreadCount,  this.noOfCountedReads );
+		
+		
+		//baseCount
+		comment = sbaseCount +  (readGroupId.equals(QprofilerXmlUtils.All_READGROUP)? 
+				": the sum of " + sbaseCount + " from all read group" 	: 	": " + sreadCount + " * readMaxLength");
+		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );
+		XmlUtils.outputValueNode( rgElement, sbaseCount, this.maxBases  );		
+		
+		//baseLost
+		comment = slostBase +  (readGroupId.equals(QprofilerXmlUtils.All_READGROUP)? 
+				": the sum of " + slostBase + " from all read group" 	: 	": readMaxLength * ( duplicateReads + nonCanonicalPairs + unmappedReads) + trimmedBases + softClippedBases + hardClippedBases + overlappedBases");
+		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );		
+		XmlUtils.outputValueNode( rgElement, slostBase,  lostBase);	
+		
+				
+		//add overall information to current readgroup element	
+		comment = String.format("%s: %s / %s", QprofilerXmlUtils.lostPercent, slostBase, sbaseCount);
+		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );
+		double lostPercent =  this.maxBases == 0? 0: 100 * (double) lostBase / this.maxBases ;			
 		XmlUtils.outputValueNode( rgElement, QprofilerXmlUtils.lostPercent, lostPercent );			
 	}
 	 	 
 	public void pairSummary2Xml( Element parent ) { 
 		//add to xml RG_Counts
-		Element ele =  XmlUtils.createMetricsNode(parent, "pairs", pairNum.get());
+		Element ele =  XmlUtils.createMetricsNode(parent, "pairs", null, pairNum.get());
 
 		XmlUtils.outputValueNode( ele, "mateUnmappedPair", mateUnmapped.get() );
 		XmlUtils.outputValueNode( ele, "mateDifferentReferencePair", diffRef.get() );
@@ -474,15 +487,17 @@ public class ReadGroupSummary {
 		}
 		double standardDeviation = Math.sqrt(sd);
 		
+		//tlen section 
 		Element ele1 = XmlUtils.createGroupNode(ele, "tlen");
 		XmlUtils.outputValueNode(ele1, smax, this.max_isize.get());
-		ele1.appendChild(ele1.getOwnerDocument().createComment("below stats is based on tlen value < " + middleTlenValue));
 		XmlUtils.outputValueNode(ele1, smin, min);		
+		
+		ele1.appendChild(ele1.getOwnerDocument().createComment("below stats is based on tlen value < " + middleTlenValue));
 		XmlUtils.outputValueNode(ele1, smean, mean);
 		XmlUtils.outputValueNode(ele1, smode, mode);	
 		XmlUtils.outputValueNode(ele1, smedian, medium);
-		XmlUtils.outputValueNode(ele1, "pairCount", no);		
-		XmlUtils.outputValueNode( ele1, "standardDeviation", (int)standardDeviation);			
+		XmlUtils.outputValueNode(ele1, pairCount, no);		
+		XmlUtils.outputValueNode( ele1, stdDev, (int)standardDeviation);			
 	}
 	
 	private void badReadStats(Element parent, String nodeName, long reads, long badBase ){

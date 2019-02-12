@@ -38,7 +38,7 @@ import org.qcmg.qprofiler2.report.SummaryReport;
 import org.qcmg.qprofiler2.vcf.VcfSummarizer;
 import org.w3c.dom.Element;
 
-
+//xmllint --noout --schema ~/PATH/Schema.xsd file.xml
 public class QProfiler2 {
 		
 	private static QLogger logger;	
@@ -126,13 +126,14 @@ public class QProfiler2 {
 		root.setAttribute( "user", System.getProperty("user.name") );
 		root.setAttribute( "operatingSystem", System.getProperty("os.name") );
 		root.setAttribute( "version", version );
-		
+		root.setAttribute("validationSchema", "qprofiler_2_0.xsd");
+		QprofilerXmlUtils.asXmlText(root, outputFile);		
 		 
 		//set attribute for xsd file
 //		root.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
 //		root.setAttribute("xsi:noNamespaceSchemaLocation", "combined1.xsd");
-		root.setAttribute("XmlSchemaValidity", "qprofiler_2_0.xsd");
-		QprofilerXmlUtils.asXmlText(root, outputFile);
+		
+
 		
 		return exitStatus;
 	}

@@ -56,7 +56,7 @@ public class FastqSummaryReport extends SummaryReport {
 		
 		//header line:"analysis read name pattern for read group
 		Element element =   QprofilerXmlUtils.createSubElement(parent, QprofilerXmlUtils.qname ) ;	
-		element = XmlUtils.createMetricsNode(element, null,readHeaderSummary.getInputReadNumber());							
+		element = XmlUtils.createMetricsNode(element, null,null, readHeaderSummary.getInputReadNumber());							
 		readHeaderSummary.toXml(element );		
 
 		//seq		
@@ -64,10 +64,10 @@ public class FastqSummaryReport extends SummaryReport {
 		element =   QprofilerXmlUtils.createSubElement(parent,QprofilerXmlUtils.seq  ) ;//QprofilerXmlUtils.createSubElement(parent, "SequenceData" );	 
 		seqByCycle.toXml( element, QprofilerXmlUtils.seqBase, null, seqBaseCycle );	
 		
-		Element ele = XmlUtils.createMetricsNode( element, QprofilerXmlUtils.seqLength ,  null); 
+		Element ele = XmlUtils.createMetricsNode( element, QprofilerXmlUtils.seqLength , null, null); 
 		XmlUtils.outputTallyGroup( ele, QprofilerXmlUtils.seqLength, seqByCycle.getLengthMapFromCycle(), true );	
 		
-		ele = XmlUtils.createMetricsNode( element, QprofilerXmlUtils.badBase, null);
+		ele = XmlUtils.createMetricsNode( element, QprofilerXmlUtils.badBase,null, null);
 		XmlUtils.outputTallyGroup( ele, FastqSummaryReport.badBaseNum,   seqBadReadLineLengths.toMap(), true );	
 		XmlUtils.addCommentChild(ele, FastqSummaryReport.badBaseComment );
 		
@@ -80,9 +80,9 @@ public class FastqSummaryReport extends SummaryReport {
 		final String qualBaseCycle = QprofilerXmlUtils.qualBase + QprofilerXmlUtils.cycle ; 	
 		element =   QprofilerXmlUtils.createSubElement(parent, QprofilerXmlUtils.qual) ;
 		qualByCycleInteger.toXml(element,QprofilerXmlUtils.qualBase ,null,   qualBaseCycle) ;
-		ele = XmlUtils.createMetricsNode( element, QprofilerXmlUtils.qualLength,null) ;
+		ele = XmlUtils.createMetricsNode( element, QprofilerXmlUtils.qualLength,null, null) ;
 		XmlUtils.outputTallyGroup( ele,  QprofilerXmlUtils.qualLength,  qualByCycleInteger.getLengthMapFromCycle(), true ) ;	
-		ele = XmlUtils.createMetricsNode( element,  QprofilerXmlUtils.badBase, null) ;
+		ele = XmlUtils.createMetricsNode( element,  QprofilerXmlUtils.badBase,null,  null) ;
 		XmlUtils.outputTallyGroup( ele,  FastqSummaryReport.badBaseNum ,  qualBadReadLineLengths.toMap(), false ) ;
 		XmlUtils.addCommentChild(ele, FastqSummaryReport.badQualComment );
 		

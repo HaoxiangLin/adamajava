@@ -33,7 +33,7 @@ public class CohortSummaryReport extends SummaryReport {
 	
 	CohortSummaryReport(File fxml, Element sampleNode) throws IOException{
 		this.file = fxml.getCanonicalPath();
-		this.sampleId = sampleNode.getAttribute(XmlUtils.Sid);
+		this.sampleId = sampleNode.getAttribute(VcfSummaryReport.sampleID);
 		
 		for( Element ele : QprofilerXmlUtils.getChildElementByTagName( sampleNode, SampleSummary.report ) ) {
 			Category cat = new Category( ele.getAttribute(SampleSummary.values), ele ); 

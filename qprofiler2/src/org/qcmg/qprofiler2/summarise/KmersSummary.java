@@ -224,7 +224,7 @@ public class KmersSummary {
 			Set<String> kmerStrs = getPopularKmerString(maxNo,  klength, false, pair);
 			
 			// "counts per mer string start on specified base cycle"	
-			Element ele = XmlUtils.createMetricsNode(parent, name, parsedCount[pair].get() );
+			Element ele = XmlUtils.createMetricsNode(parent, klength+"mers", BamSummaryReport2.sourceName[pair], parsedCount[pair].get() );
 	 		for( int i = 0; i < cycleNo; i++ ){	
 	 			Map<String, AtomicLong> map = new HashMap<>();
 	 			for(String mer :  kmerStrs) {
@@ -232,7 +232,7 @@ public class KmersSummary {
 					if( c > 0 )
 						map.put(mer, new AtomicLong(c));					
 				}
-				XmlUtils.outputTallyGroup( ele, "kmersOnCycle_"+(i+1), map, false );					
+				XmlUtils.outputTallyGroup( ele, XmlUtils.Scycle + (i+1), map, false );					
 			}	
 			if(	Math.pow(4, klength) > maxNo )
 				XmlUtils.addCommentChild(ele, "here only list top "+ maxNo + " most popular kmers sequence for each Base Cycle" );

@@ -22,6 +22,7 @@ import org.w3c.dom.Element;
 public class VcfSummaryReport  extends SummaryReport {
 	public static final String seperator = Constants.COLON_STRING;		
 	public static final String Sample = "sample";	
+	public static final String sampleID = "sId";	
 	private final VcfHeader vcfHeader;	
 	private final String[] sampleIds; 
  
@@ -90,7 +91,7 @@ public class VcfSummaryReport  extends SummaryReport {
 		Element summaryElement =  QprofilerXmlUtils.createSubElement(parent,  ProfileType.VCF.getReportName()+"Metrics" );		
 		for( String sample : summaries.keySet() ) {	
 			Element ele =  QprofilerXmlUtils.createSubElement( summaryElement, Sample);
-			ele.setAttribute(XmlUtils.Sid, sample);
+			ele.setAttribute(sampleID, sample);
 						
 			for(String cates : summaries.get(sample).keySet() ) {			
 				if( formatsTypes.isEmpty() ) {

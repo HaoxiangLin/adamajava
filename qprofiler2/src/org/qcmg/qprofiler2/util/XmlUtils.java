@@ -26,13 +26,15 @@ public class XmlUtils {
 	public static final String Sbin = "closedBin";
 	public static final String metricsEle = "sequence" + metrics;
 	public static final String Sname = "name";
-	public static final String Sid = "id";	
+	public static final String recordID = "reId";
+	public static final String readGroupID = "rgId";
 	public static final String Scount = "count";
 	public static final String Spercent = "percent";
 	public static final String Stally = "tally";
 	public static final String Sstart = "start";
 	public static final String Send = "end";
-	public static final String Stype = "Type";
+	public static final String Stype = "subType";
+	public static final String Scycle = "cycle";
 	
 	
    public static void bamHeaderToXml(Element parent1, SAMFileHeader header){
@@ -75,13 +77,15 @@ public class XmlUtils {
 
                             //set id
                             if (re instanceof SAMSequenceRecord) {
-                                    elechild.setAttribute("id", ((SAMSequenceRecord)re).getSequenceName()  );
+                                    elechild.setAttribute(recordID, ((SAMSequenceRecord)re).getSequenceName()  );
                             }else if (re instanceof SAMReadGroupRecord) {
-                                    elechild.setAttribute("id", ((SAMReadGroupRecord)re).getId()  );
+                                    elechild.setAttribute(recordID, ((SAMReadGroupRecord)re).getId()  );
                             }else if (re instanceof SAMProgramRecord) {
-                                elechild.setAttribute("id", ((SAMProgramRecord)re).getId()  );
+                                elechild.setAttribute(recordID, ((SAMProgramRecord)re).getId()  );
+                                elechild.setAttribute(Sname, ((SAMProgramRecord)re).getProgramName()  );
+                                
                             }else if(re instanceof VcfHeaderRecord) {
-                                    elechild.setAttribute("id",((VcfHeaderRecord) re).getId() != null ? ((VcfHeaderRecord) re).getId(): ((VcfHeaderRecord) re).getMetaKey().replace("##", "") );
+                                    elechild.setAttribute(recordID,((VcfHeaderRecord) re).getId() != null ? ((VcfHeaderRecord) re).getId(): ((VcfHeaderRecord) re).getMetaKey().replace("##", "") );
                             }
                             element.appendChild(elechild);
                     }
@@ -124,9 +128,11 @@ public class XmlUtils {
 	 * @param id: readgroup id. set to null if not exists
 	 * @return
 	 */       
-    public static Element createMetricsNode(Element parent,  String name, Number totalcount ) {
+    public static Element createMetricsNode(Element parent,  String name, String subType,  Number totalcount ) {
     	
     	Element ele = QprofilerXmlUtils.createSubElement( parent,  XmlUtils.metricsEle );
+    	
+    	if( subType != null ) ele.setAttribute( Stype, subType );  
 					
 		if( totalcount != null ) ele.setAttribute( Scount, String.valueOf(totalcount));  
 		 
@@ -216,8 +222,19 @@ public class XmlUtils {
 
     public static Element createReadGroupNode( Element parent, String rgid) {
      	Element ele = QprofilerXmlUtils.createSubElement( parent, "readGroup" );
-    	ele.setAttribute(Sid, rgid);
+    	ele.setAttribute(readGroupID, rgid);
     	return ele;
+    }
+    
+    /**
+     * join str1 and str2 which fist letter will be capitalized. 
+     * @param str1
+     * @param str2 will covert the first letter to upper case
+     * @return a joined string
+     */
+    public static String join(String str1, String str2) {
+    	
+    	return str1 + str2.substring(0,1).toUpperCase() + str2.substring(1);
     }
         
         

@@ -31,7 +31,8 @@ import org.w3c.dom.Element;
  * Class that tallies by cycle using java generics 
   */
 public class CycleSummary<T> {
-	public static final String baseOnCycle = "baseOnCycle_";
+	//public static final String baseOnCycle = "baseOnCycle_";
+	public static final String baseOnCycle = "cycle";
 	
 	private static final int MAX_ARRAY_CAPACITY = 2048 * 2048;		// over 4 million
 		
@@ -324,15 +325,15 @@ public class CycleSummary<T> {
 		//do nothing if no base detected
 		Set<T> possibles = getPossibleValues();
 		if( possibles == null || possibles.size() <= 0 ) return; 
-		String name = metricType == null ? metricName : metricName+"_"+ metricType;		
-		Element ele = XmlUtils.createMetricsNode(parent, name , null);			
+		//String name = metricType == null ? metricName : metricName+"_"+ metricType;		
+		Element ele = XmlUtils.createMetricsNode(parent, metricName ,metricType, null);			
 		
 		for (Integer cycle : cycles()){
 			Map<T, AtomicLong> tallys = new LinkedHashMap<>();
 			
 			for(T t :  getPossibleValues()) 				 
 				tallys.put(  t,new AtomicLong(count(cycle, t)));			
-			XmlUtils.outputTallyGroup( ele, this.baseOnCycle +cycle, tallys, false );	
+			XmlUtils.outputTallyGroup( ele, baseOnCycle +cycle, tallys, false );	
 		}		
 	}	
 
