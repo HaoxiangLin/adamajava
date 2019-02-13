@@ -26,15 +26,15 @@ public class XmlUtils {
 	public static final String Sbin = "closedBin";
 	public static final String metricsEle = "sequence" + metrics;
 	public static final String Sname = "name";
-	public static final String recordID = "reId";
-	public static final String readGroupID = "rgId";
+//	public static final String readGroupID = "rgId";
 	public static final String Scount = "count";
 	public static final String Spercent = "percent";
 	public static final String Stally = "tally";
 	public static final String Sstart = "start";
 	public static final String Send = "end";
-	public static final String Stype = "subType";
+//	public static final String Stype = "subType";
 	public static final String Scycle = "cycle";
+	public static final String baseCycleEle = "baseCycle";
 	
 	
    public static void bamHeaderToXml(Element parent1, SAMFileHeader header){
@@ -77,15 +77,15 @@ public class XmlUtils {
 
                             //set id
                             if (re instanceof SAMSequenceRecord) {
-                                    elechild.setAttribute(recordID, ((SAMSequenceRecord)re).getSequenceName()  );
+                                    elechild.setAttribute(Sname, ((SAMSequenceRecord)re).getSequenceName()  );
                             }else if (re instanceof SAMReadGroupRecord) {
-                                    elechild.setAttribute(recordID, ((SAMReadGroupRecord)re).getId()  );
+                                    elechild.setAttribute(Sname, ((SAMReadGroupRecord)re).getId()  );
                             }else if (re instanceof SAMProgramRecord) {
-                                elechild.setAttribute(recordID, ((SAMProgramRecord)re).getId()  );
+                                elechild.setAttribute(Sname, ((SAMProgramRecord)re).getId()  );
                                 elechild.setAttribute(Sname, ((SAMProgramRecord)re).getProgramName()  );
                                 
                             }else if(re instanceof VcfHeaderRecord) {
-                                    elechild.setAttribute(recordID,((VcfHeaderRecord) re).getId() != null ? ((VcfHeaderRecord) re).getId(): ((VcfHeaderRecord) re).getMetaKey().replace("##", "") );
+                                    elechild.setAttribute(Sname,((VcfHeaderRecord) re).getId() != null ? ((VcfHeaderRecord) re).getId(): ((VcfHeaderRecord) re).getMetaKey().replace("##", "") );
                             }
                             element.appendChild(elechild);
                     }
@@ -128,21 +128,24 @@ public class XmlUtils {
 	 * @param id: readgroup id. set to null if not exists
 	 * @return
 	 */       
-    public static Element createMetricsNode(Element parent,  String name, String subType,  Number totalcount ) {
+    public static Element createMetricsNode(Element parent,  String name, Number totalcount ) {
     	
     	Element ele = QprofilerXmlUtils.createSubElement( parent,  XmlUtils.metricsEle );
-    	
-    	if( subType != null ) ele.setAttribute( Stype, subType );  
-					
+    						
 		if( totalcount != null ) ele.setAttribute( Scount, String.valueOf(totalcount));  
 		 
 		if(name != null) ele.setAttribute( Sname, name );
+		
+//		if( subType != null ) {
+//			
+//			return QprofilerXmlUtils.createSubElement( ele,   "variableGroups" );
+//		}  
 		
 		return ele;        	
     }      
         
 	/**
-	 * <category name="name" >... </category>
+	 * <variableGroup name="name" >... </category>
 	 * @param parent
 	 * @param name: category name
 	 * @param id: readgroup id. set to null if not exists
@@ -151,6 +154,19 @@ public class XmlUtils {
     public static Element createGroupNode(Element parent, String name) {
     	Element ele = QprofilerXmlUtils.createSubElement( parent,  XmlUtils.variableGroupEle );	
     	ele.setAttribute( Sname, name); 
+    	return ele;
+    }
+    
+	/**
+	 * <variableGroup name="name" >... </category>
+	 * @param parent
+	 * @param name: category name
+	 * @param id: readgroup id. set to null if not exists
+	 * @return
+	 */
+    public static Element createCycleNode(Element parent, String name) {
+    	Element ele = QprofilerXmlUtils.createSubElement( parent,  baseCycleEle );	
+    	ele.setAttribute( Scycle, name); 
     	return ele;
     }
         
@@ -195,13 +211,11 @@ public class XmlUtils {
     	ele.setAttribute(Send,  String.valueOf(end));
     	ele.setAttribute(Scount, String.valueOf(count)); 
     }
-   
-    public static <T> void outputTallyGroup( Element parent, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
-    	if(tallys == null || tallys.isEmpty()) return;
-    	       	
-    	Element ele = createGroupNode( parent, name);	//<category>       	
-		double sum = hasPercent ? tallys.values().stream().mapToDouble( x -> (double) x.get() ).sum() : 0;	
-		
+    
+    
+    private static <T> void outputTallys( Element ele, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
+    	
+    	double sum = hasPercent ? tallys.values().stream().mapToDouble( x -> (double) x.get() ).sum() : 0;	
 		for(Entry<T,  AtomicLong> entry : tallys.entrySet()) { 
 			//skip zero value for output
 			if(entry.getValue().get() == 0 ) continue;
@@ -212,7 +226,28 @@ public class XmlUtils {
 			if( hasPercent == true) {
 				ele1.setAttribute(Spercent, String.format("%,.2f", percent));	
 			}
-		}        	
+		}  	
+    	
+    	
+    }
+   
+    public static <T> void outputTallyGroup( Element parent, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
+    	if(tallys == null || tallys.isEmpty()) return;
+    	       	
+    	Element ele = createGroupNode( parent, name);	//<category>       	
+		
+    	outputTallys(  ele,  name,  tallys,  hasPercent );
+      	
+    }
+    
+    
+    public static <T> void outputCycleTallyGroup( Element parent, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
+    	if(tallys == null || tallys.isEmpty()) return;
+    	       	
+    	Element ele = QprofilerXmlUtils.createSubElement( parent,  baseCycleEle );	
+    	ele.setAttribute( Scycle, name); 
+ 
+    	outputTallys(  ele,  name,  tallys,  hasPercent );        	
     }
     
     public static void addCommentChild(Element ele, String comment) {
@@ -222,7 +257,7 @@ public class XmlUtils {
 
     public static Element createReadGroupNode( Element parent, String rgid) {
      	Element ele = QprofilerXmlUtils.createSubElement( parent, "readGroup" );
-    	ele.setAttribute(readGroupID, rgid);
+    	ele.setAttribute(Sname, rgid);
     	return ele;
     }
     

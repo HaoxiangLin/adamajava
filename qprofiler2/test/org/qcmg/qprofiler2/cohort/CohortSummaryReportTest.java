@@ -66,18 +66,16 @@ public class CohortSummaryReportTest {
 		
 		VcfSummaryReport report = (VcfSummaryReport) (new  VcfSummarizer(category)).summarize( input.getAbsolutePath()) ;
 		report.toXml( root );
-		
-		
+				
 		int outputSize = 0;
 		for(Element ele :  QprofilerXmlUtils.getOffspringElementByTagName (root, VcfSummaryReport.Sample)){
 			CohortSummaryReport xReport = new CohortSummaryReport( input, ele );
 			List<String> outputs = xReport.outputCounts();
 			outputSize += outputs.size();
 			
-			if(ele.getAttribute(XmlUtils.Sid).equals("test1") ){
+			if(ele.getAttribute(XmlUtils.Sname).equals("test1") ){
 				assertTrue(outputs.size() == 4);
-				for(String output : outputs ){
-									 
+				for(String output : outputs ){								 
 					String[] subs = new String[]{"5BP=3:SOMATIC;GERM=42,185", "5BP=3:SOMATIC", "PASS:SOMATIC\tSNV" ,"PASS:SOMATIC\tDNV" };					
 					if(output.contains(subs[0]))
 						assertEquals( input.getCanonicalPath() + "\ttest1\t" + subs[0] + "\tSNV\t10\t1.000\t0.00",  output );
@@ -90,9 +88,9 @@ public class CohortSummaryReportTest {
 				}
 			}else if(ele.getAttribute(XmlUtils.Sname).equals("control1") ){
 				assertTrue(outputs.size() == 3);
-				for(String output : outputs ){
+				for(String output : outputs ){					
 					if(output.contains("\tSNV\t"))
-						assertEquals( input.getCanonicalPath() + "\tcontrol1\tPASS:.\tSNV\t20\t1.000\tnull",  output  ) ;
+						assertEquals( input.getCanonicalPath() + "\tcontrol1\tPASS:.\tSNV\t20\t1.000\t0.00",  output  ) ;
 					else if(output.contains("\tDNV\t"))
 						assertEquals( input.getCanonicalPath() + "\tcontrol1\tPASS:.\tDNV\t10\t0.000\t-",  output  ) ;
 					else

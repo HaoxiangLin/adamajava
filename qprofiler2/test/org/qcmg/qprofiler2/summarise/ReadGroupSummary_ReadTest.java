@@ -115,7 +115,9 @@ public class ReadGroupSummary_ReadTest {
 		double sumPercent = 0, percent = 0;		 
 		int sumBase = 0, base = 0;
 		for(Element ele: QprofilerXmlUtils.getOffspringElementByTagName(parent, XmlUtils.Svalue)) {
-			if(! ele.getParentNode().getNodeName().equals(XmlUtils.variableGroupEle)) {
+			//check overall first
+			Element parentE = (Element)ele.getParentNode();
+			if( parentE.getAttribute(XmlUtils.Sname).equals(QprofilerXmlUtils.overall)) {
 				if( ele.getAttribute(XmlUtils.Sname).equals( ReadGroupSummary.slostBase )) 
 					base = Integer.parseInt(ele.getTextContent());				
 				else if( ele.getAttribute(XmlUtils.Sname).equals( QprofilerXmlUtils.lostPercent))
@@ -141,7 +143,7 @@ public class ReadGroupSummary_ReadTest {
 	private void checkDiscardReads(Element parent, String... counts) {		
 		assertTrue( parent.getAttribute("count").equals(counts[0]) ); //9 reads in this read group
 		Element ele1 = QprofilerXmlUtils.getChildElementByTagName(parent, XmlUtils.variableGroupEle)
-				   .stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals("discardReads")).findFirst().get() ;				
+				   .stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals("discardedReads")).findFirst().get() ;				
 		assertTrue( checkChildValue(ele1,"supplementaryAlignmentCount", counts[1]));
 		assertTrue( checkChildValue(ele1,"secondaryAlignmentCount", counts[2]));
 		assertTrue( checkChildValue(ele1,"failedVendorQualityCount", counts[3]));	
@@ -159,7 +161,7 @@ public class ReadGroupSummary_ReadTest {
 		   Element groupE =  QprofilerXmlUtils.getChildElementByTagName(parent, XmlUtils.variableGroupEle)
 				   .stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals(name)).findFirst().get() ;		   
 			assertTrue( checkChildValue(groupE,"readCount", String.valueOf(reads)));
-			assertTrue( checkChildValue(groupE,"lostBase", String.valueOf(base)));			 		
+			assertTrue( checkChildValue(groupE,"baseLost", String.valueOf(base)));			 		
 			assertTrue( checkChildValue(groupE,"basePercent",percent));
 			return groupE;
 	}
@@ -222,6 +224,9 @@ public class ReadGroupSummary_ReadTest {
 		ReadGroupSummary rgSumm = createRGElement(rgid );
 		Element root = QprofilerXmlUtils.createRootElement("root",null);
 		rgSumm.readSummary2Xml( root );
+		
+		//debug
+		QprofilerXmlUtils.asXmlText(root, "/Users/christix/Documents/Eclipse/data/qprofiler/bam/test.xml");
 				
 		//must be after readSummary2Xml(root)
 		assertTrue(rgSumm.getMaxBases() == 100 ); //2 * maxReadLength
@@ -230,20 +235,24 @@ public class ReadGroupSummary_ReadTest {
 		root = QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.metricsEle)		
 			.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals( "reads" )).findFirst().get() ;
 				
-		assertTrue(root.getChildNodes().getLength() == 14); //includes comments
+		assertTrue(root.getChildNodes().getLength() == 9); //includes comments
 		List<Element> valueEles = QprofilerXmlUtils.getOffspringElementByTagName(root, XmlUtils.Svalue);
-		assertTrue(valueEles.size() == 49);				
-		assertTrue( checkChildValue( root, "readMaxLength", "50" )); 
-		assertTrue( checkChildValue( root, ReadGroupSummary.sreadCount, "2" ));
-		assertTrue( checkChildValue( root, "countedBase", "100" ));
-		assertTrue( checkChildValue( root, ReadGroupSummary.slostBase, "30" ));
-		assertTrue( checkChildValue( root, QprofilerXmlUtils.lostPercent, "30.00" ));  //304/415
+		assertTrue(valueEles.size() == 49);	
+		
+		//check overall		 
+		Element groupE =  QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.variableGroupEle)
+			.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals(QprofilerXmlUtils.overall)).findFirst().get() ;		   		
+		assertTrue( checkChildValue( groupE, "readMaxLength", "50" )); 
+		assertTrue( checkChildValue( groupE, ReadGroupSummary.sreadCount, "2" ));
+		assertTrue( checkChildValue( groupE, ReadGroupSummary.sbaseCount, "100" ));
+		assertTrue( checkChildValue( groupE, ReadGroupSummary.slostBase, "30" ));
+		assertTrue( checkChildValue( groupE, QprofilerXmlUtils.lostPercent, "30.00" ));  //304/415
 						
 		checkDiscardReads(root, new String[] {"2", "0", "0","0"});		
 		//counted reads is 9-1-1-1 =6							
 		checkBadReadStats(root, "duplicateReads", 0, 0, "0.00");
 		checkBadReadStats(root, "unmappedReads", 0, 0, "0.00" );
-		checkBadReadStats(root, "nonCanonicalPair", 0, 0, "0.00" );
+		checkBadReadStats(root, "nonCanonicalPairs", 0, 0, "0.00" );
 		//total counted read Base is 2*50=100
 		//int[]{reads, min, max, mean, mode, median, lostBase}
 		checkCountedReadStats(root, ReadGroupSummary.node_trim , new int[] {1,13,13,13,13,13,13}, "13.00");
@@ -266,19 +275,23 @@ public class ReadGroupSummary_ReadTest {
 		assertTrue(rgSumm.getCountedReads() == 1); //counted reads is  1					
 		root = QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.metricsEle)		
 				.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals( "reads" )).findFirst().get() ;	
-				
-		assertTrue( checkChildValue( root, "readMaxLength", "75" )); 
-		assertTrue( checkChildValue( root, ReadGroupSummary.sreadCount, "1" ));
-		assertTrue( checkChildValue( root, "countedBase", "75" ));
-		assertTrue( checkChildValue( root, ReadGroupSummary.slostBase, "75" ));
-		assertTrue( checkChildValue( root, QprofilerXmlUtils.lostPercent, "100.00" ));  //304/415
+		
+		//check readCount		 
+		Element groupE =  QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.variableGroupEle)
+			.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals(QprofilerXmlUtils.overall)).findFirst().get() ;		   
+
+		assertTrue( checkChildValue( groupE, "readMaxLength", "75" )); 
+		assertTrue( checkChildValue( groupE, ReadGroupSummary.sreadCount, "1" ));
+		assertTrue( checkChildValue( groupE, "baseCount", "75" ));
+		assertTrue( checkChildValue( groupE, ReadGroupSummary.slostBase, "75" ));
+		assertTrue( checkChildValue( groupE, QprofilerXmlUtils.lostPercent, "100.00" ));  //304/415
 
 		List<Element> valueEles = QprofilerXmlUtils.getOffspringElementByTagName(root, XmlUtils.Svalue);
 		assertTrue(valueEles.size() == 49); //less child under trimmed base on summary		
 		checkDiscardReads(root, new String[] {"1", "0", "0","0"});
 		checkBadReadStats(root, "duplicateReads", 0, 0, "0.00");
 		checkBadReadStats(root, "unmappedReads", 0, 0, "0.00" );
-		checkBadReadStats(root, "nonCanonicalPair", 1, 75, "100.00" );
+		checkBadReadStats(root, "nonCanonicalPairs", 1, 75, "100.00" );
 		
 		//total counted read Base is 6*40 = 240
 		checkCountedReadStats(root,  ReadGroupSummary.node_trim , new int[] {0,0,0,0,0,0,0}, "0.00");
@@ -302,14 +315,16 @@ public class ReadGroupSummary_ReadTest {
 		assertTrue(rgSumm.getCountedReads() == 6); //counted reads is 9-1-1-1 =6		
 		
 		root = QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.metricsEle)		
-				.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals( "reads" )).findFirst().get() ;					
-		assertTrue( checkChildValue(root,"readMaxLength", "40")); //max read length is 40 for this group
+				.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals( "reads" )).findFirst().get() ;	
+		Element groupE =  QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.variableGroupEle)
+				.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals(QprofilerXmlUtils.overall)).findFirst().get() ;	
+		assertTrue( checkChildValue(groupE,"readMaxLength", "40")); //max read length is 40 for this group
 		
 		checkDiscardReads(root, new String[] {"9", "1", "1","1"});		
 		//counted reads is 9-1-1-1 =6							
 		checkBadReadStats(root, "duplicateReads",2, 80, "33.33" );
 		checkBadReadStats(root, "unmappedReads", 1,40, "16.67" );
-		checkBadReadStats(root, "nonCanonicalPair", 1, 40, "16.67" );
+		checkBadReadStats(root, "nonCanonicalPairs", 1, 40, "16.67" );
 		//total counted read Base is 6*40 = 240
 		checkCountedReadStats(root,  ReadGroupSummary.node_trim , new int[] {0,0,0,0,0,0,0},  "0.00");
 		checkCountedReadStats(root, ReadGroupSummary.node_softClip, new int[] {0,0,0,0,0,0,0},  "0.00");
@@ -329,12 +344,16 @@ public class ReadGroupSummary_ReadTest {
 			 
 		root = QprofilerXmlUtils.getOffspringElementByTagName( root, "bamSummary" ).get(0);
 		root = QprofilerXmlUtils.getChildElementByTagName( root, XmlUtils.metricsEle )		
-				.stream().filter( ele -> ele.getAttribute(XmlUtils.Sname ).equals( "reads" )).findFirst().get() ;		
-		assertTrue( checkChildValue( root, "readMaxLength", "75" )); 
-		assertTrue( checkChildValue( root, ReadGroupSummary.sreadCount, "9" ));
-		assertTrue( checkChildValue( root, "countedBase", "415" ));
-		assertTrue( checkChildValue( root, ReadGroupSummary.slostBase, "304" ));
-		assertTrue( checkChildValue( root, QprofilerXmlUtils.lostPercent, "73.25" ));  //304/415
+				.stream().filter( ele -> ele.getAttribute(XmlUtils.Sname ).equals( "reads" )).findFirst().get() ;	
+		
+		//check readCount		 
+		Element groupE =  QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.variableGroupEle)
+			.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals(QprofilerXmlUtils.overall)).findFirst().get() ;		   		
+		assertTrue( checkChildValue( groupE, "readMaxLength", "75" )); 
+		assertTrue( checkChildValue( groupE, ReadGroupSummary.sreadCount, "9" ));
+		assertTrue( checkChildValue( groupE, "baseCount", "415" ));
+		assertTrue( checkChildValue( groupE, ReadGroupSummary.slostBase, "304" ));
+		assertTrue( checkChildValue( groupE, QprofilerXmlUtils.lostPercent, "73.25" ));  //304/415
 
 		List<Element> valueEles = QprofilerXmlUtils.getOffspringElementByTagName(root, XmlUtils.Svalue);
 		assertTrue(valueEles.size() == 44); //less child under trimmed base on summary
@@ -342,7 +361,7 @@ public class ReadGroupSummary_ReadTest {
 		checkDiscardReads( root, new String[] {"12", "1", "1","1"});
 		checkBadReadStats( root, "duplicateReads", 2, 80, "19.28");
 		checkBadReadStats( root, "unmappedReads", 1, 40, "9.64" );
-		checkBadReadStats( root, "nonCanonicalPair", 2, 115, "27.71" );
+		checkBadReadStats( root, "nonCanonicalPairs", 2, 115, "27.71" );
 		checkBadReadStats( root, ReadGroupSummary.node_trim , 1, 13, "3.13" );				
 		checkCountedReadStats( root, ReadGroupSummary.node_softClip, new int[] { 1,5,5,5,5,5,5 },  "1.20" );
 		checkCountedReadStats( root, ReadGroupSummary.node_hardClip, new int[] { 2,5,8,6,5,8,13 }, "3.13" );

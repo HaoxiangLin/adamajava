@@ -390,7 +390,7 @@ public class ReadGroupSummary {
 		
 		 checkPrepare();						
 		//add to xml RG_Counts
-		Element rgElement = XmlUtils.createMetricsNode(parent,"reads",null, inputReadCounts.get());					
+		Element rgElement = XmlUtils.createMetricsNode(parent,"reads",  inputReadCounts.get());					
 		//add discarded read Stats to readgroup summary		
 		Element ele = XmlUtils.createGroupNode(rgElement, QprofilerXmlUtils.discardReads );
 		XmlUtils.outputValueNode(ele, "supplementaryAlignmentCount", supplementary.get());
@@ -417,40 +417,44 @@ public class ReadGroupSummary {
 		XmlUtils.addCommentChild(( Element )rgElement.getLastChild(), "Only count overlapped bases on strand for pairs which have a positive TLEN value.");
 		
 		
-		XmlUtils.outputValueNode( rgElement, "readMaxLength", this.maxReadLength  );
+		//create node for overall
+		Element overallEle = XmlUtils.createGroupNode(rgElement, QprofilerXmlUtils.overall );
+		XmlUtils.outputValueNode( overallEle, "readMaxLength", this.maxReadLength  );
 		
 		//readCount
 		String comment = sreadCount + ": includes duplicateReads, nonCanonicalPairs and unmappedReads but excludes discardedReads (failed, secondary and supplementary).";
-		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );				
-		XmlUtils.outputValueNode( rgElement, sreadCount,  this.noOfCountedReads );
+		overallEle.appendChild( overallEle.getOwnerDocument().createComment(comment) );				
+		XmlUtils.outputValueNode( overallEle, sreadCount,  this.noOfCountedReads );
 		
 		
 		//baseCount
 		comment = sbaseCount +  (readGroupId.equals(QprofilerXmlUtils.All_READGROUP)? 
 				": the sum of " + sbaseCount + " from all read group" 	: 	": " + sreadCount + " * readMaxLength");
-		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );
-		XmlUtils.outputValueNode( rgElement, sbaseCount, this.maxBases  );		
+		overallEle.appendChild( overallEle.getOwnerDocument().createComment(comment) );
+		XmlUtils.outputValueNode( overallEle, sbaseCount, this.maxBases  );		
 		
 		//baseLost
 		comment = slostBase +  (readGroupId.equals(QprofilerXmlUtils.All_READGROUP)? 
 				": the sum of " + slostBase + " from all read group" 	: 	": readMaxLength * ( duplicateReads + nonCanonicalPairs + unmappedReads) + trimmedBases + softClippedBases + hardClippedBases + overlappedBases");
-		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );		
-		XmlUtils.outputValueNode( rgElement, slostBase,  lostBase);	
+		overallEle.appendChild( overallEle.getOwnerDocument().createComment(comment) );		
+		XmlUtils.outputValueNode( overallEle, slostBase,  lostBase);	
 		
 				
 		//add overall information to current readgroup element	
 		comment = String.format("%s: %s / %s", QprofilerXmlUtils.lostPercent, slostBase, sbaseCount);
-		rgElement.appendChild( rgElement.getOwnerDocument().createComment(comment) );
+		overallEle.appendChild( overallEle.getOwnerDocument().createComment(comment) );
 		double lostPercent =  this.maxBases == 0? 0: 100 * (double) lostBase / this.maxBases ;			
-		XmlUtils.outputValueNode( rgElement, QprofilerXmlUtils.lostPercent, lostPercent );			
+		XmlUtils.outputValueNode( overallEle, QprofilerXmlUtils.lostPercent, lostPercent );			
 	}
 	 	 
 	public void pairSummary2Xml( Element parent ) { 
 		//add to xml RG_Counts
-		Element ele =  XmlUtils.createMetricsNode(parent, "pairs", null, pairNum.get());
+		Element ele =  XmlUtils.createMetricsNode(parent, "pairs", pairNum.get());
 
-		XmlUtils.outputValueNode( ele, "mateUnmappedPair", mateUnmapped.get() );
-		XmlUtils.outputValueNode( ele, "mateDifferentReferencePair", diffRef.get() );
+		
+		Element ele1 = XmlUtils.createGroupNode(ele, "unPaired");
+		XmlUtils.outputValueNode( ele1, "mateUnmappedPair", mateUnmapped.get() );
+		XmlUtils.outputValueNode( ele1, "mateDifferentReferencePair", diffRef.get() );
 		
 		f5f3.toXml( ele );
 		f3f5.toXml( ele );
@@ -488,7 +492,7 @@ public class ReadGroupSummary {
 		double standardDeviation = Math.sqrt(sd);
 		
 		//tlen section 
-		Element ele1 = XmlUtils.createGroupNode(ele, "tlen");
+		ele1 = XmlUtils.createGroupNode(ele, "tlen");
 		XmlUtils.outputValueNode(ele1, smax, this.max_isize.get());
 		XmlUtils.outputValueNode(ele1, smin, min);		
 		

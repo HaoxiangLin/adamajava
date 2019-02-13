@@ -69,7 +69,6 @@ public class TagSummaryReportTest {
 		
 		Element root = QprofilerXmlUtils.createRootElement( QprofilerXmlUtils.tag, null );
 		report.toXml( root );		
-		QprofilerXmlUtils.asXmlText(root, "/Users/christix/Documents/Eclipse/data/qprofiler/unitTest.xml");		
 		checkXml( root );
 	}	
 		
@@ -80,18 +79,23 @@ public class TagSummaryReportTest {
 	
 	private void checkXml(Element root){
 		 		
-		assertEquals( 4, QprofilerXmlUtils.getChildElementByTagName( root, XmlUtils.metricsEle ).size()  );
+		assertEquals( 2, QprofilerXmlUtils.getChildElementByTagName( root, XmlUtils.metricsEle ).size()  );
+				
+		
+		//<sequenceMetrics name="tags:MD:Z">
+		Element metricE = getChildNameIs( root, XmlUtils.metricsEle, "tags:MD:Z" ).get(0);
+		assertEquals( metricE.getChildNodes().getLength() , 3 );
 		
 		//check mutation on each base cycle
-		Element ele = getChildNameIs( root, XmlUtils.metricsEle, "tags:MD:Z_firstReadInPair" ).get(0);
-		assertEquals( ele.getChildNodes().getLength() , 4 );
-		
+		Element ele = getChildNameIs( metricE, XmlUtils.variableGroupEle, QprofilerXmlUtils.FirstOfPair ).get(0);
 		//three of firstOfPair have four mutation base
 		String[] values = new String[] { "A", "T", "C", "C" };
-		int[] counts =  new int[] { 1, 10, 11, 37 };
+		String[] counts =  new String[] { "1", "10", "11", "37" };
 		for(int i = 0; i < counts.length; i++ ) {
-			String cycle =  CycleSummary.baseOnCycle + counts[i];
-			Element vE = getChildNameIs( ele, XmlUtils.variableGroupEle, cycle).get(0);
+			
+			String count = counts[i];
+			Element vE = QprofilerXmlUtils.getChildElementByTagName(ele, XmlUtils.baseCycleEle).stream().
+				filter( e -> e.getAttribute( XmlUtils.Scycle ).equals( String.valueOf(count))  ).findFirst().get();		
 			assertEquals( vE.getChildNodes().getLength() , 1 );
 			vE = (Element) vE.getChildNodes().item(0);
 			assertEquals( vE.getAttribute(XmlUtils.Svalue), values[i]);
@@ -99,16 +103,14 @@ public class TagSummaryReportTest {
 		}
 		
 		//check mutaiton type on forward reads
-		ele = getChildNameIs( root, XmlUtils.metricsEle, "tags:MD:Z_forwardReads" ).get(0);
-		assertEquals( ele.getChildNodes().getLength() , 1);
-		assertEquals( 1, getChildNameIs( ele, XmlUtils.variableGroupEle,"mutation_"+ BamSummaryReport2.sourceName[1]).size());
+		ele = getChildNameIs(metricE, XmlUtils.variableGroupEle, QprofilerXmlUtils.FirstOfPair+"Forward" ).get(0);
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).stream()
 			.filter(e -> e.getAttribute(XmlUtils.Svalue).equals("A>C") && e.getAttribute(XmlUtils.Scount).equals("2") ).count() );
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).stream()
 			.filter(e -> e.getAttribute(XmlUtils.Svalue).equals("T>A") && e.getAttribute(XmlUtils.Scount).equals("1") ).count() );		
 		
 		//check mutaiton type on reverse reads
-		ele = getChildNameIs( root, XmlUtils.metricsEle, "tags:MD:Z_reverseReads" ).get(0);
+		ele = getChildNameIs( metricE, XmlUtils.variableGroupEle, QprofilerXmlUtils.FirstOfPair+"Reverse" ).get(0);
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).size());
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).stream()
 				.filter(e -> e.getAttribute(XmlUtils.Svalue).equals("A>T") && e.getAttribute(XmlUtils.Scount).equals("1") ).count() );

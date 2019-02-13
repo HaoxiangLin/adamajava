@@ -118,20 +118,28 @@ public class BamSummaryReportTest {
 		assertEquals(expectedOutputString, outputString);
 	}
 	
-	private void checklength(Element root, boolean isSeq, String parentName, int[] values, int[] counts) throws Exception {
+	private void checklength(Element root, boolean isSeq,  String pairName, int[] values, int[] counts) throws Exception {
 		if(counts.length != values.length)
 			throw new Exception("error: values size must be same to counts size");
 		
 		String nodeName = (isSeq)? QprofilerXmlUtils.seq  : QprofilerXmlUtils.qual ;
-		String name = isSeq? QprofilerXmlUtils.seqLength : QprofilerXmlUtils.qualLength;
+		String sLength = isSeq? QprofilerXmlUtils.seqLength : QprofilerXmlUtils.qualLength;
 		
-		Element node = QprofilerXmlUtils.getOffspringElementByTagName( root, nodeName ).get( 0 );		
-		List<Element> elements = QprofilerXmlUtils.getOffspringElementByTagName( node, XmlUtils.variableGroupEle ).stream()
-			.filter( e -> e.getAttribute(XmlUtils.Sname).equals( name) &&
-					 ((Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals(parentName)).collect(Collectors.toList());
-		Assert.assertEquals(elements.size(), 1);
+		//get node <SEQ> or <QUAL>
+		List<Element> lists = QprofilerXmlUtils.getOffspringElementByTagName( root, nodeName );
+		assertEquals(1, lists.size());
 		
-		Element ele = elements.get(0);
+		//get node <sequenceMetrics name="seqLength"> or <sequenceMetrics name="qualLength">		
+		lists = QprofilerXmlUtils.getOffspringElementByTagName( lists.get( 0 ), XmlUtils.metricsEle ).stream()
+			.filter( e -> e.getAttribute(XmlUtils.Sname).equals( sLength)).collect(Collectors.toList());
+		assertEquals(1, lists.size());
+		
+		//<variableGroup name="firstReadInPair"> or <variableGroup name="secondReadInPair">				
+		lists = QprofilerXmlUtils.getOffspringElementByTagName( lists.get( 0 ), XmlUtils.variableGroupEle ).stream()
+				.filter( e -> e.getAttribute(XmlUtils.Sname).equals(pairName)).collect(Collectors.toList());		
+		assertEquals(1, lists.size());				
+		
+		Element ele = lists.get(0);
 		assertEquals(values.length, ele.getChildNodes().getLength());	
 			
 		//eg   QprofilerXmlUtils.seqLength + "_"+  QprofilerXmlUtils.FirstOfPair;
@@ -165,10 +173,10 @@ public class BamSummaryReportTest {
 		QprofilerXmlUtils.asXmlText( root, "/Users/christix/Documents/Eclipse/data/qprofiler/unitTest.xml" );
   		
 		//length
-		checklength( root, true, QprofilerXmlUtils.seqLength + "_"+  QprofilerXmlUtils.FirstOfPair, new int[] {141,151}, new int[] { 1,1 });
-		checklength( root, true, QprofilerXmlUtils.seqLength + "_"+  QprofilerXmlUtils.SecondOfPair, new int[] {151}, new int[] { 1});
-		checklength( root, false, QprofilerXmlUtils.qualLength + "_"+  QprofilerXmlUtils.FirstOfPair, new int[] {143,151}, new int[] { 1,1 });
-		checklength( root, false, QprofilerXmlUtils.qualLength + "_"+  QprofilerXmlUtils.SecondOfPair, new int[] {151}, new int[] { 1});		
+		checklength( root, true,  QprofilerXmlUtils.FirstOfPair, new int[] {141,151}, new int[] { 1,1 });
+		checklength( root, true,  QprofilerXmlUtils.SecondOfPair, new int[] {151}, new int[] { 1});
+		checklength( root, false, QprofilerXmlUtils.FirstOfPair, new int[] {143,151}, new int[] { 1,1 });
+		checklength( root, false, QprofilerXmlUtils.SecondOfPair, new int[] {151}, new int[] { 1});		
 		
 		//rNAME
 		Element node = QprofilerXmlUtils.getOffspringElementByTagName( root, QprofilerXmlUtils.rname ).get( 0 );	
@@ -179,10 +187,10 @@ public class BamSummaryReportTest {
 		//mapq is for all counted reads disregard duplicate ect, unmapped reads mapq=0
 		//Zero mapping quality indicates that the read maps to multiple locations or differet ref
 		node = QprofilerXmlUtils.getOffspringElementByTagName( root, QprofilerXmlUtils.mapq ).get( 0 );	
-		checkTally(node,  QprofilerXmlUtils.mapq + "_"+  QprofilerXmlUtils.FirstOfPair, "0", 1, 1 );
-		checkTally(node,  QprofilerXmlUtils.mapq + "_"+  QprofilerXmlUtils.FirstOfPair, "25", 1, 1 );
-		checkTally(node,  QprofilerXmlUtils.mapq + "_"+  QprofilerXmlUtils.SecondOfPair, "0", 1, 1 );	
-		checkTally(node,  QprofilerXmlUtils.mapq + "_"+  QprofilerXmlUtils.SecondOfPair, "6", 1, 1 );	
+		checkTally(node,  QprofilerXmlUtils.FirstOfPair, "0", 1, 1 );
+		checkTally(node,  QprofilerXmlUtils.FirstOfPair, "25", 1, 1 );
+		checkTally(node,  QprofilerXmlUtils.SecondOfPair, "0", 1, 1 );	
+		checkTally(node,  QprofilerXmlUtils.SecondOfPair, "6", 1, 1 );	
 				
 		
 	}
@@ -209,7 +217,7 @@ public class BamSummaryReportTest {
 		final List<Element> rgsE = checkOffSpring( checkOffSpring( tlenE, XmlUtils.readGroupsEle , 1).get(0), "readGroup" , 3); 	
 				
 		//five pairs in 1959T, we only record 13, 26, 2015
-		Element ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sid).equals( "1959T" )  ).findFirst().get();
+		Element ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sname).equals( "1959T" )  ).findFirst().get();
 		List<Element> eles1 = checkOffSpring( ele1, XmlUtils.Stally, 4);
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "13" ) && e.getAttribute(XmlUtils.Scount).equals( "1" )  ).count());
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "25" )  ).count());
@@ -224,11 +232,11 @@ public class BamSummaryReportTest {
 		
 		
 		//empty for unkown_readgroup_id
-		ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sid).equals( QprofilerXmlUtils.UNKNOWN_READGROUP )  ).findFirst().get();
+		ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sname).equals( QprofilerXmlUtils.UNKNOWN_READGROUP )  ).findFirst().get();
 		checkOffSpring( ele1, XmlUtils.variableGroupEle, 0);
 		
 		// only one pair inside 1959N
-		ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sid).equals( "1959N" )  ).findFirst().get();
+		ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sname).equals( "1959N" )  ).findFirst().get();
 		eles1 = checkOffSpring( ele1, XmlUtils.Stally, 1);
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "175" )  ).count());
 		eles1 = checkOffSpring( ele1, XmlUtils.Sbin, 1);

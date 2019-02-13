@@ -24,7 +24,7 @@ public class XmlUtilsTest {
 		try {
 			
 			Element ele = XmlUtils.createReadGroupNode( QprofilerXmlUtils.createRootElement( XmlUtils.readGroupsEle, null) , "id" );
-			assertEquals(ele.getAttribute(XmlUtils.Sid), "id");
+			assertEquals(ele.getAttribute(XmlUtils.Sname), "id");
 			assertEquals(ele.getNodeName(), "readGroup");
 
 		}catch(ParserConfigurationException e) {

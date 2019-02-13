@@ -88,23 +88,40 @@ public class TagSummaryReport2 {
 	}
 	
 	public void toXml(Element parent){						
-		//mismatchbycycle
-		for(int order = 0; order < 3; order ++) 
-			tagMDMismatchByCycle[order].toXml( parent, "tags:MD:Z", BamSummaryReport2.sourceName[order],  "mismatchBase" );
-		
-		for(String strand : new String[]{     "forwardReads", "reverseReads"}){	
-			Element ele = XmlUtils.createMetricsNode(parent, "tags:MD:Z",  strand, null);				
+		//"tags:MD:Z" mismatchbycycle
+		Element ele = XmlUtils.createMetricsNode(parent, "tags:MD:Z", null);	
+		for(int order = 0; order < 3; order ++) { 
+			tagMDMismatchByCycle[order].toXml_new( ele, BamSummaryReport2.sourceName[order] );
+		}
+				
+		for(String strand : new String[]{ "Forward", "Reverse" }){				
 			for(int order = 0; order < 3; order ++) {				
 				Map<String, AtomicLong> mdRefAltLengthsString = new HashMap<>();
-				QCMGAtomicLongArray mdRefAltLengths = (strand.contains("forward"))? mdRefAltLengthsForward[order] : mdRefAltLengthsReverse[order];				
+				QCMGAtomicLongArray mdRefAltLengths = (strand.contains("Forward"))? mdRefAltLengthsForward[order] : mdRefAltLengthsReverse[order];				
 				for (int m = 0 ; m < mdRefAltLengths.length() ; m++) {
 					long l = mdRefAltLengths.get(m);
 					if (l <= 0)  continue;
 					mdRefAltLengthsString.put(CycleSummaryUtils.getStringFromInt(m), new AtomicLong(l));					 
-				}				
-				XmlUtils.outputTallyGroup(ele,  BamSummaryReport2.sourceName[order], mdRefAltLengthsString, true);				
+				}
+				String name = BamSummaryReport2.sourceName[order] + strand; 
+				
+				XmlUtils.outputTallyGroup(ele,  name, mdRefAltLengthsString, true);				
 			}		
-		}		
+		}	
+		
+//		for(String strand : new String[]{     "forwardReads", "reverseReads"}){	
+//			Element ele = XmlUtils.createMetricsNode(parent, "tags:MD:Z",  strand, null);				
+//			for(int order = 0; order < 3; order ++) {				
+//				Map<String, AtomicLong> mdRefAltLengthsString = new HashMap<>();
+//				QCMGAtomicLongArray mdRefAltLengths = (strand.contains("forward"))? mdRefAltLengthsForward[order] : mdRefAltLengthsReverse[order];				
+//				for (int m = 0 ; m < mdRefAltLengths.length() ; m++) {
+//					long l = mdRefAltLengths.get(m);
+//					if (l <= 0)  continue;
+//					mdRefAltLengthsString.put(CycleSummaryUtils.getStringFromInt(m), new AtomicLong(l));					 
+//				}				
+//				XmlUtils.outputTallyGroup(ele,  BamSummaryReport2.sourceName[order], mdRefAltLengthsString, true);				
+//			}		
+//		}		
 		
 		// additional tags includes RG
 		for (Entry<String,  ConcurrentSkipListMap<String, AtomicLong>> entry : additionalTags.entrySet())	
@@ -122,7 +139,7 @@ public class TagSummaryReport2 {
 	private <T> void outputTag(Element ele, String tag,  Map<T, AtomicLong> tallys) {
 				
 		int size = tallys.size();	
-		ele = XmlUtils.createMetricsNode(ele, "tags:"+tag, null, size);		
+		ele = XmlUtils.createMetricsNode(ele, "tags:"+tag, size);		
 		AtomicInteger no = new AtomicInteger();		
 		tallys.entrySet().removeIf( e-> no.incrementAndGet() > 100 );
 		boolean hasPercent = (size >= 100)? false : true;

@@ -29,18 +29,24 @@ public class CycleSummaryTest {
 	@After
 	public void tearDown() { new File(INPUT_FILE).delete();	}	
 	
-	private  void checklength( Element root, String metricName, int cycle, String[] values, int[] counts ) throws Exception {
+	private  void checklength( Element root, String metricName, String pairName, int cycle, String[] values, int[] counts ) throws Exception {
 		if(counts.length != values.length)
 			throw new Exception("error: values size must be same to counts size");
 		
-		String name =  "baseOnCycle_"+ cycle;
+		
+		//eg. <sequenceMetrics name="seqBase"><variableGroup name="firstReadInPair">	
 		List<Element> elements = QprofilerXmlUtils.getOffspringElementByTagName( root, XmlUtils.variableGroupEle ).stream()
-			.filter( e -> e.getAttribute(XmlUtils.Sname).equals(name ) &&
+			.filter( e -> e.getAttribute(XmlUtils.Sname).equals(pairName ) &&
 					 ((Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals(metricName)).collect(Collectors.toList());
 		Assert.assertEquals(elements.size(), 1);
 		
-		Element ele = elements.get(0);
+
+		//eg, <baseCycle cycle="1">
+		Element ele = QprofilerXmlUtils.getOffspringElementByTagName( elements.get(0), XmlUtils.baseCycleEle ).stream()
+			.filter( e -> e.getAttribute(XmlUtils.Scycle).equals(cycle + "" )).findFirst().get();	
 		assertEquals(values.length, ele.getChildNodes().getLength());	
+		
+		
 			
 		//eg   QprofilerXmlUtils.seqLength + "_"+  QprofilerXmlUtils.FirstOfPair;
 		for(int i = 0; i < values.length; i ++) {
@@ -56,26 +62,26 @@ public class CycleSummaryTest {
 	@Test
 	public void getBaseByCycleTest() throws Exception{
  		Element root = getSummarizedRoot();			  
- 		checklength( root, QprofilerXmlUtils.seqBase +"_"+QprofilerXmlUtils.FirstOfPair, 1, new String[] {"C","T"}, new int[] { 1,1 } ) ;
- 		checklength( root, QprofilerXmlUtils.seqBase +"_"+QprofilerXmlUtils.FirstOfPair, 141, new String[] {"G","N"}, new int[] { 1,1 } ) ;
- 		checklength( root, QprofilerXmlUtils.seqBase +"_"+QprofilerXmlUtils.FirstOfPair, 142, new String[] {"N"}, new int[] { 1 } ) ;
- 		checklength( root, QprofilerXmlUtils.seqBase +"_"+QprofilerXmlUtils.FirstOfPair, 151, new String[] {"M" }, new int[] { 1 } ) ; 		
- 		checklength( root, QprofilerXmlUtils.seqBase +"_"+QprofilerXmlUtils.SecondOfPair , 2, new String[] {"N"}, new int[] { 1} ) ;
- 		checklength( root, QprofilerXmlUtils.seqBase +"_"+QprofilerXmlUtils.SecondOfPair , 4, new String[] {"T"}, new int[] { 1} ) ;
- 		checklength( root, QprofilerXmlUtils.seqBase +"_"+QprofilerXmlUtils.SecondOfPair , 151, new String[] {"G"}, new int[] { 1} ) ; 		
+ 		checklength( root, QprofilerXmlUtils.seqBase , QprofilerXmlUtils.FirstOfPair, 1, new String[] {"C","T"}, new int[] { 1,1 } ) ;
+ 		checklength( root, QprofilerXmlUtils.seqBase , QprofilerXmlUtils.FirstOfPair, 141, new String[] {"G","N"}, new int[] { 1,1 } ) ;
+ 		checklength( root, QprofilerXmlUtils.seqBase , QprofilerXmlUtils.FirstOfPair, 142, new String[] {"N"}, new int[] { 1 } ) ;
+ 		checklength( root, QprofilerXmlUtils.seqBase , QprofilerXmlUtils.FirstOfPair, 151, new String[] {"M" }, new int[] { 1 } ) ; 		
+ 		checklength( root, QprofilerXmlUtils.seqBase , QprofilerXmlUtils.SecondOfPair , 2, new String[] {"N"}, new int[] { 1} ) ;
+ 		checklength( root, QprofilerXmlUtils.seqBase , QprofilerXmlUtils.SecondOfPair , 4, new String[] {"T"}, new int[] { 1} ) ;
+ 		checklength( root, QprofilerXmlUtils.seqBase , QprofilerXmlUtils.SecondOfPair , 151, new String[] {"G"}, new int[] { 1} ) ; 		
  	}
 	
 	@Test
 	public void getQualityByCycleTest() throws Exception{
  		Element root = getSummarizedRoot();		
  		
- 		checklength( root, QprofilerXmlUtils.qualBase +"_"+QprofilerXmlUtils.FirstOfPair, 1, new String[] {"A","("}, new int[] { 1,1 } ) ;
- 		checklength( root, QprofilerXmlUtils.qualBase +"_"+QprofilerXmlUtils.FirstOfPair, 143, new String[] {"-","J"}, new int[] {1, 1} ) ;
- 		checklength( root, QprofilerXmlUtils.qualBase +"_"+QprofilerXmlUtils.FirstOfPair, 144, new String[] {"7"}, new int[] { 1 } ) ;
- 		checklength( root, QprofilerXmlUtils.qualBase +"_"+QprofilerXmlUtils.FirstOfPair, 151, new String[] {"A"}, new int[] { 1 } ) ;		
-  		checklength( root, QprofilerXmlUtils.qualBase +"_"+QprofilerXmlUtils.SecondOfPair, 1, new String[] {"A" }, new int[] { 1} ) ;	
-		checklength( root, QprofilerXmlUtils.qualBase +"_"+QprofilerXmlUtils.SecondOfPair, 148, new String[] {"-" }, new int[] { 1} ) ;
-		checklength( root, QprofilerXmlUtils.qualBase +"_"+QprofilerXmlUtils.SecondOfPair, 151, new String[] {"7" }, new int[] { 1} ) ;
+ 		checklength( root, QprofilerXmlUtils.qualBase , QprofilerXmlUtils.FirstOfPair, 1, new String[] {"A","("}, new int[] { 1,1 } ) ;
+ 		checklength( root, QprofilerXmlUtils.qualBase , QprofilerXmlUtils.FirstOfPair, 143, new String[] {"-","J"}, new int[] {1, 1} ) ;
+ 		checklength( root, QprofilerXmlUtils.qualBase , QprofilerXmlUtils.FirstOfPair, 144, new String[] {"7"}, new int[] { 1 } ) ;
+ 		checklength( root, QprofilerXmlUtils.qualBase , QprofilerXmlUtils.FirstOfPair, 151, new String[] {"A"}, new int[] { 1 } ) ;		
+  		checklength( root, QprofilerXmlUtils.qualBase , QprofilerXmlUtils.SecondOfPair, 1, new String[] {"A" }, new int[] { 1} ) ;	
+		checklength( root, QprofilerXmlUtils.qualBase , QprofilerXmlUtils.SecondOfPair, 148, new String[] {"-" }, new int[] { 1} ) ;
+		checklength( root, QprofilerXmlUtils.qualBase , QprofilerXmlUtils.SecondOfPair, 151, new String[] {"7" }, new int[] { 1} ) ;
 	}	
 
 	public static Element getSummarizedRoot() throws Exception{				

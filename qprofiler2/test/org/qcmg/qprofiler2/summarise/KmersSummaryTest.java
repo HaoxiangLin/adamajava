@@ -144,19 +144,22 @@ public class KmersSummaryTest {
 		
 		for(Element tE : tallysE) { 
 			assertTrue( tE.getAttribute(XmlUtils.Scount).equals("1") );	
-			Element parentE = (Element) tE.getParentNode();
+			Element baseCycleEle = (Element) tE.getParentNode();
+			Element groupEle =  (Element) baseCycleEle.getParentNode();
+			Element metricEle = (Element) groupEle.getParentNode();
 			if( tE.getAttribute( XmlUtils.Svalue ).equals("GTT") ) {								
-				assertTrue( parentE.getAttribute(XmlUtils.Sname).equals("kmersOnCycle_5") );
-				assertTrue( ((Element) parentE.getParentNode()).getAttribute(XmlUtils.Sname).equals("3mers_firstReadInPair") ); 
+				assertTrue( baseCycleEle.getAttribute(XmlUtils.Scycle).equals("5") );
+				assertTrue( metricEle.getAttribute(XmlUtils.Sname).equals("3mers") ); 
+				assertTrue( groupEle.getAttribute(XmlUtils.Sname).equals("firstReadInPair") ); 
 			}else if(tE.getAttribute( XmlUtils.Svalue ).equals("TAA")){
-				assertTrue( parentE.getAttribute(XmlUtils.Sname).equals("kmersOnCycle_3") );
-				assertTrue( ((Element) parentE.getParentNode()).getAttribute(XmlUtils.Sname).equals("3mers_secondReadInPair") ); 				
+				assertTrue( baseCycleEle.getAttribute(XmlUtils.Scycle).equals("3") );
+				assertTrue( metricEle.getAttribute(XmlUtils.Sname).equals("3mers") ); 
+				assertTrue( groupEle.getAttribute(XmlUtils.Sname).equals("secondReadInPair") ); 
 			}else if(tE.getAttribute( XmlUtils.Svalue ).equals("CCT")) 
-				assertTrue( parentE.getAttribute(XmlUtils.Sname).equals("kmersOnCycle_1") );
+				assertTrue( baseCycleEle.getAttribute(XmlUtils.Scycle).equals("1") );
 			else
 				assertTrue( tE.getAttribute( XmlUtils.Svalue ).equals("CAG"));			 
 		}
-		
 		
 		// kmers3
 		// CAGNG TTAGG <= GTCNCAATCC <= CCTAACNCTG		 first reversed

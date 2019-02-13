@@ -320,20 +320,23 @@ public class CycleSummary<T> {
 	 * 
 	 * @param parent Element that the current objects xml representation will be added to
 	 * @param elementName String representing the name to be used when creating the element
-	 */	
-	public void toXml( Element parent, String metricName, String metricType, String groupName ){
+	 */
+		
+	public void toXml_new( Element metricEle,  String groupName ){
 		//do nothing if no base detected
 		Set<T> possibles = getPossibleValues();
 		if( possibles == null || possibles.size() <= 0 ) return; 
 		//String name = metricType == null ? metricName : metricName+"_"+ metricType;		
-		Element ele = XmlUtils.createMetricsNode(parent, metricName ,metricType, null);			
-		
+		 	
+		Element ele = XmlUtils.createGroupNode( metricEle, groupName);	//<category>    
 		for (Integer cycle : cycles()){
 			Map<T, AtomicLong> tallys = new LinkedHashMap<>();
 			
 			for(T t :  getPossibleValues()) 				 
-				tallys.put(  t,new AtomicLong(count(cycle, t)));			
-			XmlUtils.outputTallyGroup( ele, baseOnCycle +cycle, tallys, false );	
+				tallys.put(  t,new AtomicLong(count(cycle, t)));	
+			
+			
+			XmlUtils.outputCycleTallyGroup( ele, String.valueOf( cycle ), tallys, false );	
 		}		
 	}	
 
