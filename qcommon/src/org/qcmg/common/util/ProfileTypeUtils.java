@@ -10,6 +10,7 @@ import java.io.File;
 
 import org.qcmg.common.model.ProfileType;
 
+@Deprecated
 public class ProfileTypeUtils {
 	
 	private static final String GFF_EXTENSION = "gff";
@@ -31,16 +32,12 @@ public class ProfileTypeUtils {
 	
 	public static ProfileType getType(String s) {
 		String ext = null;
-//		final String s = f.getName();/
+
 	    int i = s.lastIndexOf('.');
 	    
 	    if ( i > 0 &&  i < s.length() - 1) {
 	    	ext = s.substring(i+1).toLowerCase();
 	    }
-//	    if ( ! f.isDirectory() && i > 0 &&  i < s.length() - 1) {
-//	    	ext = s.substring(i+1).toLowerCase();
-//	    }
-	    
 	    
 	    // if ext is equal to gz, then find the previous extension
 	    if (GZ_EXTENSION.equals(ext)) {

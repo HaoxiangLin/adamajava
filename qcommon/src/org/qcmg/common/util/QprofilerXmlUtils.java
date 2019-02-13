@@ -37,15 +37,16 @@ public class QprofilerXmlUtils {
 	public static final String FirstOfPair = "firstReadInPair"; 
 	public static final String SecondOfPair = "secondReadInPair";
 	public static final String mdCycle = "mdMismatchCycles";	
-	public static final String discardReads = "discardReads";
+	public static final String discardReads = "discardedReads";
 	public static final String fileReads = "fileReads";	
 	public static final String duplicateReads = "duplicateReads";
 	public static final String unmappedReads = 	"unmappedReads";
-	public static final String nonCanonicalPair = "nonCanonicalPair";
+	public static final String nonCanonicalPair = "nonCanonicalPairs";
 	public static final String trimmedBase = "trimmedBase";
 	public static final String softClippedBases = "softClippedBases";
 	public static final String hardClippedBases = "hardClippedBases";
-	public static final String overlapBases = "overlapBases";
+	public static final String overlapBases = "overlappedBases";
+	
 	
 	//debug will removed for new qprofiler2
 	public static final String filteredReads = "filteredReads";
@@ -84,12 +85,14 @@ public class QprofilerXmlUtils {
 	public static final String seq = "SEQ"; 
 	public static final String tag = "TAG";
 	public static final String cycle = "Cycle";	
-	public static final String seqBase = "sequenceBase";
-	public static final String seqLength = "sequenceLength";
+	public static final String seqBase = "seqBase";
+	public static final String seqLength = "seqLength";
 	public static final String badBase = "badBase";
 	public static final String qual = "QUAL";
 	public static final String qualBase = "qualBase";
 	public static final String qualLength = "qualLength";
+	//<sequenceMetrics...><variableGroup name="overall">
+	public static final String overall = "overall"; //overall information for reads 
 
 		
 			
