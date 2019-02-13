@@ -75,7 +75,7 @@ public class VcfSummaryReportTest {
 			else if( headersEle.getAttribute( "FIELD" ).equals( "qPG" ) ) {
 				mark[2] = 1;
 				for( Element ele : QprofilerXmlUtils.getChildElementByTagName( headersEle, "record") )
-					assertEquals( ele.getTextContent(), header.getIDRecord("qPG", ele.getAttribute("reId")).toString() );					
+					assertEquals( ele.getTextContent(), header.getIDRecord("qPG", ele.getAttribute(XmlUtils.Sname)).toString() );					
 			}else if( headersEle.getAttribute( "FIELD" ).equals( "FILTER" ) ) {
 				mark[3] = 1;
 				assertEquals( 1, headersEle.getChildNodes().getLength() );
