@@ -26,15 +26,14 @@ public class XmlUtils {
 	public static final String Sbin = "closedBin";
 	public static final String metricsEle = "sequence" + metrics;
 	public static final String Sname = "name";
-//	public static final String readGroupID = "rgId";
 	public static final String Scount = "count";
 	public static final String Spercent = "percent";
 	public static final String Stally = "tally";
 	public static final String Sstart = "start";
 	public static final String Send = "end";
-//	public static final String Stype = "subType";
 	public static final String Scycle = "cycle";
 	public static final String baseCycleEle = "baseCycle";
+	public static final String recordEle ="record";
 	
 	
    public static void bamHeaderToXml(Element parent1, SAMFileHeader header){
@@ -66,7 +65,7 @@ public class XmlUtils {
                     element.setAttribute( cateName, cateValue);
                     element.setAttribute( "description", des);
                     for(T re: records) {
-                            Element elechild = QprofilerXmlUtils.createSubElement(parent, "record" );
+                            Element elechild = QprofilerXmlUtils.createSubElement(parent, recordEle );
                             //set txt content
                             if(re instanceof String)
                                     elechild.setTextContent((String)re);
@@ -82,7 +81,7 @@ public class XmlUtils {
                                     elechild.setAttribute(Sname, ((SAMReadGroupRecord)re).getId()  );
                             }else if (re instanceof SAMProgramRecord) {
                                 elechild.setAttribute(Sname, ((SAMProgramRecord)re).getId()  );
-                                elechild.setAttribute(Sname, ((SAMProgramRecord)re).getProgramName()  );
+                             //   elechild.setAttribute(Sname, ((SAMProgramRecord)re).getProgramName()  );
                                 
                             }else if(re instanceof VcfHeaderRecord) {
                                     elechild.setAttribute(Sname,((VcfHeaderRecord) re).getId() != null ? ((VcfHeaderRecord) re).getId(): ((VcfHeaderRecord) re).getMetaKey().replace("##", "") );
@@ -135,12 +134,7 @@ public class XmlUtils {
 		if( totalcount != null ) ele.setAttribute( Scount, String.valueOf(totalcount));  
 		 
 		if(name != null) ele.setAttribute( Sname, name );
-		
-//		if( subType != null ) {
-//			
-//			return QprofilerXmlUtils.createSubElement( ele,   "variableGroups" );
-//		}  
-		
+				
 		return ele;        	
     }      
         
