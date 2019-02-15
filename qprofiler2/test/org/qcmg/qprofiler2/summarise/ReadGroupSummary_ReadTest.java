@@ -161,7 +161,7 @@ public class ReadGroupSummary_ReadTest {
 		   Element groupE =  QprofilerXmlUtils.getChildElementByTagName(parent, XmlUtils.variableGroupEle)
 				   .stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals(name)).findFirst().get() ;		   
 			assertTrue( checkChildValue(groupE,"readCount", String.valueOf(reads)));
-			assertTrue( checkChildValue(groupE,"baseLost", String.valueOf(base)));			 		
+			assertTrue( checkChildValue(groupE,"basesLost", String.valueOf(base)));			 		
 			assertTrue( checkChildValue(groupE,"basePercent",percent));
 			return groupE;
 	}

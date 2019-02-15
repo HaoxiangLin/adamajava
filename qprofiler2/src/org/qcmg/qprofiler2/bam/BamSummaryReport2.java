@@ -157,12 +157,9 @@ public class BamSummaryReport2 extends SummaryReport {
 		for( Entry<String, ReadIDSummary> entry:  readIdSummary.entrySet()){
 			//"analysis read name pattern for read group
 			Element ele = XmlUtils.createReadGroupNode(rgsElement, entry.getKey());
-			Element readNameElement = XmlUtils.createMetricsNode(ele, "qnameFormat", entry.getValue().getInputReadNumber());				
-			entry.getValue().toXml(readNameElement);
+//			Element readNameElement = XmlUtils.createMetricsNode(ele, "qnameFormat", entry.getValue().getInputReadNumber());				
+			entry.getValue().toXml(ele);
 			
-			//add first ten reads qname
-			readNameElement = XmlUtils.createMetricsNode(ele, "qnameExample", null);
-			entry.getValue().outputQname(readNameElement);
 		}
 	}
 	

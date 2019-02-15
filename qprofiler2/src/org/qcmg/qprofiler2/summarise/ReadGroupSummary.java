@@ -38,11 +38,11 @@ public class ReadGroupSummary {
 	public final static String smean = "meanUnderTlen5000"; 
 	public final static String smode =  "modeUnderTlen5000"; 
 	public final static String smedian = "medianUnderTlen5000" ; 
-	public final static String stdDev = "stdDevnUnderTlen5000" ; 
+	public final static String stdDev = "stdDevUnderTlen5000" ; 
 	public final static String pairCount = "pairCountUnderTlen5000" ; 
 	
 	public final static String sreadCount = "readCount"; 
-	public final static String slostBase = "baseLost"; 
+	public final static String slostBase = "basesLost"; 
 	public final static String sbasePercent = "basePercent"; 
 	public static final String sbaseCount = "baseCount"; //"countedBase"
 	
@@ -435,7 +435,7 @@ public class ReadGroupSummary {
 		
 		//baseLost
 		comment = slostBase +  (readGroupId.equals(QprofilerXmlUtils.All_READGROUP)? 
-				": the sum of " + slostBase + " from all read group" 	: 	": readMaxLength * ( duplicateReads + nonCanonicalPairs + unmappedReads) + trimmedBases + softClippedBases + hardClippedBases + overlappedBases");
+				": the sum of " + slostBase + " from all read group" 	: 	": readMaxLength * (duplicateReads + nonCanonicalPairs + unmappedReads) + trimmedBases + softClippedBases + hardClippedBases + overlappedBases");
 		overallEle.appendChild( overallEle.getOwnerDocument().createComment(comment) );		
 		XmlUtils.outputValueNode( overallEle, slostBase,  lostBase);	
 		

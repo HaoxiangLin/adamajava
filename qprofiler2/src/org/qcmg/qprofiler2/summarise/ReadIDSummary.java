@@ -128,7 +128,9 @@ public class ReadIDSummary {
 		}		
 	}
 		
-	public void toXml(Element element){		
+	public void toXml(Element ele){		
+		
+		Element element = XmlUtils.createMetricsNode(ele, "qnameFormat", getInputReadNumber());
 		// header breakdown		
 		XmlUtils.outputTallyGroup( element, "InValidReadName", invalidId, false );
 		XmlUtils.outputTallyGroup( element,  "INSTRUMENTS", instruments , false );
@@ -139,6 +141,10 @@ public class ReadIDSummary {
 		XmlUtils.outputTallyGroup( element,  "PAIR_INFO", pairs, false );
 		XmlUtils.outputTallyGroup( element,  "FILTER_INFO", getFiltered() , false );
 		XmlUtils.outputTallyGroup( element,  "INDEXES", indexes , false );		
+		
+		//add first ten reads qname
+		element = XmlUtils.createMetricsNode(ele, "qnameExample", null);
+		outputQname(element);		
 	}
 			
 	public ConcurrentMap<String, AtomicLong> getInstrumentsMap(){ return instruments;	}	

@@ -56,7 +56,7 @@ public class FastqSummaryReport extends SummaryReport {
 		
 		//header line:"analysis read name pattern for read group
 		Element element =   QprofilerXmlUtils.createSubElement(parent, QprofilerXmlUtils.qname ) ;	
-		element = XmlUtils.createMetricsNode(element, null, readHeaderSummary.getInputReadNumber());							
+	//	element = XmlUtils.createMetricsNode(element, null, readHeaderSummary.getInputReadNumber());							
 		readHeaderSummary.toXml(element );		
 
 		//seq		
