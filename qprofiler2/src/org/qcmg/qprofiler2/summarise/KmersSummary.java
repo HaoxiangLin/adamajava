@@ -189,18 +189,20 @@ public class KmersSummary {
 	public void toXml( Element parent, int klength ) { 
 		final int maxNo = 16;
 		Element merEle = XmlUtils.createMetricsNode(parent, klength+"mers", null );
-		
-		
+				
 		for(int pair = 0; pair < 3; pair ++){
-			if (parsedCount[pair].get() <= 0 ) continue; 			
+			if (parsedCount[pair].get() <= 0 ) continue; 	
+			
 			//avoid kmers_null or kmers_unPaired in case have no pair
-			String name = klength+"mers_"+BamSummaryReport2.sourceName[pair];
+			String name = BamSummaryReport2.sourceName[pair];
+			
+			//read may have no pair information such as fastq
 			if(pair == 0 && parsedCount[1].get() == 0 &&parsedCount[2].get() == 0)
 				name = klength+"mers";
 			Set<String> kmerStrs = getPopularKmerString(maxNo,  klength, false, pair);
 			
 			// "counts per mer string start on specified base cycle"	
-			Element ele = XmlUtils.createGroupNode(merEle, BamSummaryReport2.sourceName[pair]);
+			Element ele = XmlUtils.createGroupNode(merEle, name);
 	 		for( int i = 0; i < cycleNo; i++ ){	
 	 			Map<String, AtomicLong> map = new HashMap<>();
 	 			for(String mer :  kmerStrs) {

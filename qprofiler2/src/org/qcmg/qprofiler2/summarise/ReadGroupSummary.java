@@ -14,6 +14,7 @@ import htsjdk.samtools.SAMRecord;
 public class ReadGroupSummary {
 	//xml node name 	
 	public final static String node_readgroup = "readGroup";
+	public final static String node_other = "otherPair";
 	public final static String node_f5f3 = "f5f3Pair";
 	public final static String node_f3f5 = "f3f5Pair";
 	public final static String node_inward = "inwardPair";
@@ -33,13 +34,10 @@ public class ReadGroupSummary {
 		
 	public final static String smin= "min";	
 	public final static String smax = "max";
-	//debug
-	//for sequenceMetrics::"paris"/variableGroup::tlen
-	public final static String smean = "meanUnderTlen5000"; 
-	public final static String smode =  "modeUnderTlen5000"; 
-	public final static String smedian = "medianUnderTlen5000" ; 
-	public final static String stdDev = "stdDevUnderTlen5000" ; 
-	public final static String pairCount = "pairCountUnderTlen5000" ; 
+	public final static String smean = "mean"; 
+	public final static String smode =  "mode"; 
+	public final static String smedian = "median" ; 
+	public final static String stdDev = "stdDev" ; 
 	
 	public final static String sreadCount = "readCount"; 
 	public final static String slostBase = "basesLost"; 
@@ -78,7 +76,8 @@ public class ReadGroupSummary {
 	PairedRead f3f5 = new PairedRead( node_f3f5 );
 	PairedRead f5f3 = new PairedRead( node_f5f3 );
 	PairedRead inward = new PairedRead( node_inward );
-	PairedRead outward = new PairedRead( node_outward );	
+	PairedRead outward = new PairedRead( node_outward );
+	PairedRead otherPair = new PairedRead( node_other );
 	
 	//pair in different reference
 	AtomicLong diffRef  = new AtomicLong();	
@@ -96,7 +95,7 @@ public class ReadGroupSummary {
 	private int maxReadLength = 0;
 	private long noOfCountedReads = -1;
 	private long trimedRead = -1;
-	
+		
 	private final String readGroupId; 		
 	public ReadGroupSummary(String rgId){
 		this.readGroupId = rgId; 
@@ -187,6 +186,9 @@ public class ReadGroupSummary {
 			
 		}
 		
+		//debug
+		long getOverlappedPairs() {return overlap.get();}
+		
 	}
 		
 	/**
@@ -248,12 +250,18 @@ public class ReadGroupSummary {
 		 		
 		//parse overlap
 		int overlap = PairedRecordUtils.getOverlapBase(record);
-		if(overlap > 0) overlapBase.increment(overlap);
+		if(overlap > 0) {
+			overlapBase.increment(overlap);
+		}
 		parsePairing( record , overlap); 				
 		return true; 			
  
 	}
 	
+	
+	public QCMGAtomicLongArray getOverlapCount(){
+		return overlapBase;
+	}
 	public QCMGAtomicLongArray getISizeCount(){
 		return isize;
 	}
@@ -283,7 +291,7 @@ public class ReadGroupSummary {
 		//pair from different reference, only look at first pair to avoid double counts
 		if( !record.getReferenceName().equals( record.getMateReferenceName()) && record.getFirstOfPairFlag()){
 			diffRef.incrementAndGet();	
-			pairNum.incrementAndGet();			
+			pairNum.incrementAndGet();	
 			return; 
 		}
 		
@@ -303,14 +311,18 @@ public class ReadGroupSummary {
 		//proper pair with tlen > 0 disregard first or second of pair		
 		pairNum.incrementAndGet();	
 		//another reason is impossible to caculate overlapBase since getOverlapBase( record) return 0 if tlen<=0		
-		if(overlapBase == null)	 //non-canonical pair
-			overlapBase = PairedRecordUtils.getOverlapBase( record);		
+		if(overlapBase == null) {	 //non-canonical pair
+			overlapBase = PairedRecordUtils.getOverlapBase( record);
+		}
+				
 		if( PairedRecordUtils.isF5toF3(record)) f5f3.parse( record, overlapBase ); 		
 		else if( PairedRecordUtils.isF3toF5(record)) f3f5.parse( record, overlapBase );	 
 		else if( PairedRecordUtils.isOutward(record)) outward.parse( record, overlapBase );		
 		else if( PairedRecordUtils.isInward(record)) inward.parse( record, overlapBase );
-				
-		
+		else {
+			//record pairs which we can't recognize
+			otherPair.parse(record, overlapBase);
+		}
 		//record tlen
 		int tLen =  record.getInferredInsertSize();	
 		//record the maxmum tlen value
@@ -416,7 +428,6 @@ public class ReadGroupSummary {
 		lostBase += lostBaseStats( rgElement, node_overlap, overlapBase, this.maxBases );
 		XmlUtils.addCommentChild(( Element )rgElement.getLastChild(), "Only count overlapped bases on strand for pairs which have a positive TLEN value.");
 		
-		
 		//create node for overall
 		Element overallEle = XmlUtils.createGroupNode(rgElement, QprofilerXmlUtils.overall );
 		XmlUtils.outputValueNode( overallEle, "readMaxLength", this.maxReadLength  );
@@ -459,7 +470,9 @@ public class ReadGroupSummary {
 		f5f3.toXml( ele );
 		f3f5.toXml( ele );
 		inward.toXml( ele );
-		outward.toXml( ele );		
+		outward.toXml( ele );
+		otherPair.toXml(ele);
+		
 
 		//output tlen refer to method lostBaseStats(...)
 		long sum = 0, no = 0;
@@ -495,13 +508,14 @@ public class ReadGroupSummary {
 		ele1 = XmlUtils.createGroupNode(ele, "tlen");
 		XmlUtils.outputValueNode(ele1, smax, this.max_isize.get());
 		XmlUtils.outputValueNode(ele1, smin, min);		
-		
+
 		ele1.appendChild(ele1.getOwnerDocument().createComment("below stats is based on tlen value < " + middleTlenValue));
-		XmlUtils.outputValueNode(ele1, smean, mean);
-		XmlUtils.outputValueNode(ele1, smode, mode);	
-		XmlUtils.outputValueNode(ele1, smedian, medium);
-		XmlUtils.outputValueNode(ele1, pairCount, no);		
-		XmlUtils.outputValueNode( ele1, stdDev, (int)standardDeviation);			
+		XmlUtils.outputValueNode(ele1, "meanUnderTlen5000", mean);
+		XmlUtils.outputValueNode(ele1, "modeUnderTlen5000", mode);	
+		XmlUtils.outputValueNode(ele1, "medianUnderTlen5000", medium);
+		XmlUtils.outputValueNode(ele1, "pairCountUnderTlen5000", no);		
+		XmlUtils.outputValueNode( ele1, "stdDevUnderTlen5000", (int)standardDeviation);			
+
 	}
 	
 	private void badReadStats(Element parent, String nodeName, long reads, long badBase ){

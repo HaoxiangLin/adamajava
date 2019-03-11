@@ -101,7 +101,7 @@ public class XmlUtils {
         //the last header line with #CHROM
         List<String> headers = new ArrayList<>();
         headers.add( header.getChrom().toString() );
-        createHeaderRecords(parent, cateName , "headerline", "header line", headers );
+        createHeaderRecords(parent, cateName , "headerline", "The header line", headers );
                         
         //information line with key=value pair
         createHeaderRecords(parent, cateName , "MetaInformation", "Meta-information lines", header.getAllMetaRecords());

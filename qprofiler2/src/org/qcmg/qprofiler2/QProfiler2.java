@@ -122,19 +122,13 @@ public class QProfiler2 {
 		//xml reorganise
 		sol.setFinishTime(DateUtils.getCurrentDateAsString());		
 		root.setAttribute( "startTime",  sol.getStartTime() );
-		root.setAttribute( "finishTime", sol.getFinishTime() );
+		root.setAttribute( "finishTime", sol.getFinishTime() );		
 		root.setAttribute( "user", System.getProperty("user.name") );
 		root.setAttribute( "operatingSystem", System.getProperty("os.name") );
 		root.setAttribute( "version", version );
 		root.setAttribute("validationSchema", "qprofiler_2_0.xsd");
 		QprofilerXmlUtils.asXmlText(root, outputFile);		
-		 
-		//set attribute for xsd file
-//		root.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
-//		root.setAttribute("xsi:noNamespaceSchemaLocation", "combined1.xsd");
-		
-
-		
+		 			
 		return exitStatus;
 	}
 	

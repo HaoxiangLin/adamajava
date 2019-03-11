@@ -225,13 +225,15 @@ public class BamSummaryReport2 extends SummaryReport {
         // ISIZE
         Set<String> readGroups =  rgSummaries.keySet();
         readGroups.remove(QprofilerXmlUtils.All_READGROUP);       
-        parent = QprofilerXmlUtils.createSubElement(parent, XmlUtils.readGroupsEle );        
+        parent = QprofilerXmlUtils.createSubElement(parent, XmlUtils.readGroupsEle );  
+        
         for(String rg : readGroups ) {
-        	//output isize
-        	QCMGAtomicLongArray iarray= rgSummaries.get(rg).getISizeCount();       	
-        	Map<String, AtomicLong> tallys =  iarray.toMap().entrySet().stream().collect(Collectors.toMap(e -> String.valueOf( e.getKey()  ), Map.Entry::getValue));
         	String rgName = (readGroups.size() == 1 && rg.equals(QprofilerXmlUtils.UNKNOWN_READGROUP))? null : rg;
         	Element ele = XmlUtils.createMetricsNode( XmlUtils.createReadGroupNode(parent, rgName), null, null);
+       	
+        	//output isize
+        	QCMGAtomicLongArray iarray= rgSummaries.get(rg).getISizeCount(); 
+        	Map<String, AtomicLong> tallys =  iarray.toMap().entrySet().stream().collect(Collectors.toMap(e -> String.valueOf( e.getKey()  ), Map.Entry::getValue));
         	XmlUtils.outputTallyGroup( ele,  "tLen",  tallys, false );  
         	
         	//output isize range
@@ -244,7 +246,11 @@ public class BamSummaryReport2 extends SummaryReport {
         		int end = (i+1)* ReadGroupSummary.rangeGap;
         		XmlUtils.outputBinNode( cateEle, start, end, iarray.get(i) );
         	}
-        	 
+        	        	
+        	//output overlap   	
+        	iarray= rgSummaries.get(rg).getOverlapCount();    
+        	tallys =  iarray.toMap().entrySet().stream().collect(Collectors.toMap(e -> String.valueOf( e.getKey()  ), Map.Entry::getValue));
+        	XmlUtils.outputTallyGroup( ele,  "overlapBases",  tallys, false );         	
         }	
 	}			
 	private void createCigar(Element parent) {
@@ -322,8 +328,6 @@ public class BamSummaryReport2 extends SummaryReport {
 			readIdSummary.computeIfAbsent( readGroup, (k) -> new ReadIDSummary() ).parseReadId( record.getReadName() );
  			
 			// SEQ 
-			 
-//			byte[] data = (record.getReadNegativeStrandFlag())? SummaryReportUtils.getReversedSeq(record.getReadBases()) : record.getReadBases();			
 			byte[] data = record.getReadBases();			
 			if (record.getReadNegativeStrandFlag()) {
 				SequenceUtil.reverseComplement(data );

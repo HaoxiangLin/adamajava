@@ -97,7 +97,7 @@ public class ReadIDSummary {
 			if (headerLength > 9)  updateMap(indexes, headerDetails[9]);
 		}catch( Exception e) {
 			updateMap(invalidId, "ReadNameInValid");		 
-		}				
+		}
 	}
 
 	
@@ -130,7 +130,7 @@ public class ReadIDSummary {
 		
 	public void toXml(Element ele){		
 		
-		Element element = XmlUtils.createMetricsNode(ele, "qnameFormat", getInputReadNumber());
+		Element element = XmlUtils.createMetricsNode(ele, "qnameInfo", getInputReadNumber());
 		// header breakdown		
 		XmlUtils.outputTallyGroup( element, "InValidReadName", invalidId, false );
 		XmlUtils.outputTallyGroup( element,  "INSTRUMENTS", instruments , false );
