@@ -120,6 +120,38 @@ public class KmersSummaryTest {
  		}
  		assertTrue(summary.getCount(4, bases1[4], 1 ) == 1);		 
 	}
+	
+	@Test
+	public void toXmlFastqTest() throws ParserConfigurationException {
+		
+		final String base1 = "CAGNGTTAGGTTTTT";
+		final String base2 = "CCCCGTTAGGTTTTTT";
+		KmersSummary summary = new KmersSummary(KmersSummary.maxKmers);	
+		//prepair data base only no strand and pair info		
+		summary.parseKmers( base1.getBytes() , false, 0);
+		summary.parseKmers( base2.getBytes() , false, 0);
+		
+		Element root = QprofilerXmlUtils.createRootElement("root", null);
+		summary.toXml(root, 2);
+				
+		//only one <sequenceMetrics>
+		List<Element> eles = QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.metricsEle);
+		assertEquals(eles.size(), 1);
+		assertEquals(eles.get(0).getAttribute(XmlUtils.Sname), "2mers");
+		assertEquals(1, eles.get(0).getChildNodes().getLength());
+		
+		//check <variableGroup...>
+		Element ele = (Element)eles.get(0).getFirstChild();
+		assertEquals(ele.getAttribute(XmlUtils.Sname), "2mers") ;
+		//base.length -3 
+		//cycle number = base.length - KmersSummary.maxKmers = 16-6 that is [1,11]
+		assertEquals(11, ele.getChildNodes().getLength());
+		for(int i = 0; i < ele.getChildNodes().getLength(); i ++) {
+			Element baseE = QprofilerXmlUtils.getChildElement(ele, XmlUtils.baseCycleEle, i);
+			assertEquals(baseE.getAttribute(XmlUtils.Scycle), (i+1) + "");
+		}	
+		
+	}
 
 	@Test
 	public void toXmlTest() throws IOException, DOMException, ParserConfigurationException {		
@@ -149,8 +181,8 @@ public class KmersSummaryTest {
 			Element metricEle = (Element) groupEle.getParentNode();
 			if( tE.getAttribute( XmlUtils.Svalue ).equals("GTT") ) {								
 				assertTrue( baseCycleEle.getAttribute(XmlUtils.Scycle).equals("5") );
-				assertTrue( metricEle.getAttribute(XmlUtils.Sname).equals("3mers") ); 
-				assertTrue( groupEle.getAttribute(XmlUtils.Sname).equals("firstReadInPair") ); 
+				assertTrue( metricEle.getAttribute(XmlUtils.Sname).equals("3mers") );	
+				assertTrue( groupEle.getAttribute(XmlUtils.Sname).equals("firstReadInPair") ); 				
 			}else if(tE.getAttribute( XmlUtils.Svalue ).equals("TAA")){
 				assertTrue( baseCycleEle.getAttribute(XmlUtils.Scycle).equals("3") );
 				assertTrue( metricEle.getAttribute(XmlUtils.Sname).equals("3mers") ); 

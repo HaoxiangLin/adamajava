@@ -224,10 +224,7 @@ public class ReadGroupSummary_ReadTest {
 		ReadGroupSummary rgSumm = createRGElement(rgid );
 		Element root = QprofilerXmlUtils.createRootElement("root",null);
 		rgSumm.readSummary2Xml( root );
-		
-		//debug
-		QprofilerXmlUtils.asXmlText(root, "/Users/christix/Documents/Eclipse/data/qprofiler/bam/test.xml");
-				
+						
 		//must be after readSummary2Xml(root)
 		assertTrue(rgSumm.getMaxBases() == 100 ); //2 * maxReadLength
 		assertTrue(rgSumm.getCountedReads() == 2);
@@ -386,8 +383,9 @@ public class ReadGroupSummary_ReadTest {
 		root = QprofilerXmlUtils.getOffspringElementByTagName(root, "bamSummary").get(0);
 		root = QprofilerXmlUtils.getChildElementByTagName(root, XmlUtils.metricsEle)		
 				.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals( "reads" )).findFirst().get() ;
-		checkCountedReadStats( root, ReadGroupSummary.node_hardClip, new int[] { 4,3,8,5,5,5,21 }, "2.56" );		
-		checkCountedReadStats( root, ReadGroupSummary.node_overlap, new int[] { 3,12,26,17,12,13,51 }, "6.22" );	 				
+		checkCountedReadStats( root, ReadGroupSummary.node_hardClip, new int[] { 4,3,8,5,5,5,21 }, "2.16" );		
+		checkCountedReadStats( root, ReadGroupSummary.node_overlap, new int[] { 4,12,75,31,12,26,126 }, "12.99" );	 				
+
 	}
 
 	

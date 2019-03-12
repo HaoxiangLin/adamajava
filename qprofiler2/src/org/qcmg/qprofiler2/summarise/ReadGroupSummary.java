@@ -95,6 +95,7 @@ public class ReadGroupSummary {
 	private int maxReadLength = 0;
 	private long noOfCountedReads = -1;
 	private long trimedRead = -1;
+	
 		
 	private final String readGroupId; 		
 	public ReadGroupSummary(String rgId){
@@ -141,54 +142,68 @@ public class ReadGroupSummary {
  		PairedRead(String name){this.name = name;}
  		
 		AtomicLong overlap = new AtomicLong();
+		AtomicLong zero = new AtomicLong();
 		AtomicLong near = new AtomicLong();
 		AtomicLong far = new AtomicLong();
-		AtomicLong bigTlen  = new AtomicLong();	
-		
+		AtomicLong bigTlen  = new AtomicLong();			
 		AtomicLong recordSum  = new AtomicLong();
-		AtomicLong recordSum_flag_p = new AtomicLong();
 		
+//		//debug
+//		private int debugOutNo = 3;
+//		private int overlapOutNo = 3;		
 		void parse(SAMRecord record, Integer overlapBase ){		
 			recordSum.getAndIncrement();
 			
-			if(record.getProperPairFlag())	recordSum_flag_p.getAndIncrement();
-			
+			//non-canonical reads eg. F3F5, F5F3
+			if(overlapBase == null) {	
+				overlapBase = PairedRecordUtils.getOverlapBase( record);
+			}
+					
+			//classify tlen groups
 			if( overlapBase > 0 ){
 				overlap.incrementAndGet();	
-			}
-			if(record.getInferredInsertSize() >= bigTlenValue){
+//				if( overlapOutNo  > 0 && !QprofilerXmlUtils.All_READGROUP.equals(readGroupId)) {
+//					System.out.println( name + overlapOutNo + " (overlap):: " + record.getSAMString());
+//					overlapOutNo --;
+//				}
+			}else if(record.getInferredInsertSize() == 0) {
+				zero.incrementAndGet();
+//				//debug
+//				if(debugOutNo > 0 && !QprofilerXmlUtils.All_READGROUP.equals(readGroupId)) {
+//					System.out.println(name + debugOutNo + " (tLenZero):: " + record.getSAMString());
+//					debugOutNo --;
+//				}
+			} else if( record.getInferredInsertSize() < smallTlenValue  ){
+				near.incrementAndGet();					
+			} else if( record.getInferredInsertSize() >= smallTlenValue && record.getInferredInsertSize() < bigTlenValue ){
+				far.incrementAndGet();	
+			}else if(record.getInferredInsertSize() >= bigTlenValue){
 				bigTlen.incrementAndGet();
-			}							
-			if( record.getInferredInsertSize() >= smallTlenValue && record.getInferredInsertSize() < bigTlenValue ){
-				far.incrementAndGet();		
-			}
-			if( record.getInferredInsertSize() < smallTlenValue && overlapBase <= 0 ){
-				near.incrementAndGet();		
-			}			
+			} 			
 		}		
 		
 		/**
-		 * 	  <f5f3Pair tlenUnder1500="3528" TlenOver10000="102075" tlenBetween1500And10000="22027" overlapping="241" count="127871"/>
-	  <f3f5Pair tlenUnder1500="12784" TlenOver10000="105049" tlenBetween1500And10000="21797" overlapping="738" count="140368"/>
-	  <inwardPair tlenUnder1500="134706192" TlenOver10000="198419" tlenBetween1500And10000="148179" overlapping="6988807" count="142041597"/>
-	  <outwardPair tlenUnder1500="100769" TlenOver10000="205890" tlenBetween1500And10000="111947" overlapping="322649" count="741255"/>
-		 * @param parent
+		 * output example: 	 
+		 *  <variableGroup name="outwardPair">
+				<value name="overlappedPairs">898775</value>
+				<value name="tlenUnder1500Pairs">219588</value>
+				<value name="tlenOver10000Pairs">572986</value>
+				<value name="tlenBetween1500And10000Pairs">237035</value>
+				<value name="pairCount">1928384</value>
+			</variableGroup>
+		 * @param parent element
 		 */
 		
 		void toXml(Element parent  ){			
 			Element stats = XmlUtils.createGroupNode(parent, name);
 			XmlUtils.outputValueNode(stats, "overlappedPairs", overlap.get());
-			//stats.appendChild(stats.getOwnerDocument().createComment("below counts excluding overlapping pairs"));
-			XmlUtils.outputValueNode(stats, "tlenUnder1500Pairs", near.get() );		 
+			XmlUtils.outputValueNode(stats, "tlenis0Pairs", zero.get() );
+			XmlUtils.outputValueNode(stats, "tlenOver0Under1500Pairs", near.get() );		 
 			XmlUtils.outputValueNode(stats, "tlenOver10000Pairs", bigTlen.get()  );
 			XmlUtils.outputValueNode(stats, "tlenBetween1500And10000Pairs",far.get() );
 			XmlUtils.outputValueNode(stats, "pairCount", recordSum.get()  );
 			
-		}
-		
-		//debug
-		long getOverlappedPairs() {return overlap.get();}
-		
+		}		
 	}
 		
 	/**
@@ -273,56 +288,43 @@ public class ReadGroupSummary {
 	 * count the first of pair number and record iSize(Tlen);
  	 * if( mate unmapped) record it and then return; 
  	 * if(mate map to different ref && first of pair) record it and then return; 
- 	 * counts pair direction and distance; Here we only select reads with Tlen>0 from pair to avoiding double counts
+ 	 * counts pair direction and distance; to avoid double counts, here we only select reads with :
+ 	 * Tlen>0 from pair or tLen==0 but first of pair
 	 * @param record: a mapped and paired read and not duplicate, not supplementary, secondary or failed
 	 * @param overlapBase
 	 */
 	public void parsePairing( SAMRecord record, Integer overlapBase ){
-		//skip non-paired reads
-		if( !record.getReadPairedFlag() )  return;  
+		//skip non-paired reads, and reads with tlen minus
+		if( !record.getReadPairedFlag() || record.getInferredInsertSize() < 0 )  return;  
 		
+		//if tlen unvaliable, discard them unless it is first of pair
+		if( record.getInferredInsertSize() == 0 && !record.getFirstOfPairFlag()) return;
+		
+		//record pair number; pairNum >= sum(f3f5, f5f3,inward,outward, diffRef, mateUnmapped)	
+		pairNum.incrementAndGet();
+				
 		//normally bam reads are mapped, if the mate is missing, we still count it to pair but no detailed pair information
-		if( record.getMateUnmappedFlag() ){
-			mateUnmapped.incrementAndGet(); 
-			pairNum.incrementAndGet();	
-			return; 
-		}
+		if( record.getMateUnmappedFlag() ){ mateUnmapped.incrementAndGet();  return;  }
 		
 		//pair from different reference, only look at first pair to avoid double counts
 		if( !record.getReferenceName().equals( record.getMateReferenceName()) && record.getFirstOfPairFlag()){
 			diffRef.incrementAndGet();	
-			pairNum.incrementAndGet();	
 			return; 
 		}
-		
-		//if tlen unvaliable count first of pair and then discard	
-		//pairNum >= sum(f3f5, f5f3,inward,outward, diffRef, mateUnmapped)	
-		if( record.getInferredInsertSize() == 0 && record.getFirstOfPairFlag()) { 
-			isize.increment(0);
-			pairNum.incrementAndGet();	
-			return;
-		}
-								
-		//discard remains reads with tlen minus or unvaliable 	
-		if( record.getInferredInsertSize() <= 0 ) { return; }
-				
+														
 		//waringing: 
 		//both pair with tlen >0 it is hardly happen, bad value but picard accept it
 		//proper pair with tlen > 0 disregard first or second of pair		
-		pairNum.incrementAndGet();	
-		//another reason is impossible to caculate overlapBase since getOverlapBase( record) return 0 if tlen<=0		
-		if(overlapBase == null) {	 //non-canonical pair
-			overlapBase = PairedRecordUtils.getOverlapBase( record);
-		}
-				
+		//another reason is impossible to caculate overlapBase since getOverlapBase( record) return 0 if tlen<=0	
+						
 		if( PairedRecordUtils.isF5toF3(record)) f5f3.parse( record, overlapBase ); 		
 		else if( PairedRecordUtils.isF3toF5(record)) f3f5.parse( record, overlapBase );	 
 		else if( PairedRecordUtils.isOutward(record)) outward.parse( record, overlapBase );		
 		else if( PairedRecordUtils.isInward(record)) inward.parse( record, overlapBase );
-		else {
-			//record pairs which we can't recognize
-			otherPair.parse(record, overlapBase);
-		}
+		//record pairs which we can't recognize
+		else { otherPair.parse(record, overlapBase); }
+		
+		
 		//record tlen
 		int tLen =  record.getInferredInsertSize();	
 		//record the maxmum tlen value

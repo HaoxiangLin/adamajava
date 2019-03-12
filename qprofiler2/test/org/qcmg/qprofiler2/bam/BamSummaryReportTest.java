@@ -207,10 +207,7 @@ public class BamSummaryReportTest {
 		
 		//overall readgroup should manually  setMaxBases(long);
 		Element root = QprofilerXmlUtils.createRootElement("root", null);
-		sr.toXml(root);	
-		//debug
-		QprofilerXmlUtils.asXmlText( root, "/Users/christix/Documents/Eclipse/data/qprofiler/unitTest.xml" );
-		
+		sr.toXml(root);			
 		
 		final Element tlenE = checkOffSpring(  root, QprofilerXmlUtils.tlen , 1).get(0); //one <TLEN>
 		//three readGroup under one <readGroups>
@@ -218,26 +215,28 @@ public class BamSummaryReportTest {
 				
 		//five pairs in 1959T, we only record 13, 26, 2015
 		Element ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sname).equals( "1959T" )  ).findFirst().get();
-		List<Element> eles1 = checkOffSpring( ele1, XmlUtils.Stally, 4);
+		Element ele2 = QprofilerXmlUtils.getOffspringElementByTagName(ele1, XmlUtils.variableGroupEle).stream()
+				.filter( e -> e.getAttribute(XmlUtils.Sname).equals( "tLen" )  ).findFirst().get();
+		List<Element> eles1 = checkOffSpring( ele2, XmlUtils.Stally, 4);
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "13" ) && e.getAttribute(XmlUtils.Scount).equals( "1" )  ).count());
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "25" )  ).count());
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "26" )  ).count());
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "2025" )  ).count());
 		//tLenByBin
 		eles1 = checkOffSpring( ele1, XmlUtils.Sbin, 3);
-		//debug
-		eles1.stream().forEach( e -> System.out.println(e.getAttribute(XmlUtils.Sstart) + " => " + e.getAttribute(XmlUtils.Scount) ));
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Sstart).equals( "1" ) && e.getAttribute(XmlUtils.Scount).equals( "3" )  ).count());
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Send).equals( "10100" )  ).count());
 		
 		
 		//empty for unkown_readgroup_id
 		ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sname).equals( QprofilerXmlUtils.UNKNOWN_READGROUP )  ).findFirst().get();
-		checkOffSpring( ele1, XmlUtils.variableGroupEle, 0);
+		checkOffSpring( ele1, XmlUtils.variableGroupEle, 3);
 		
 		// only one pair inside 1959N
 		ele1 = rgsE.stream().filter( e -> e.getAttribute(XmlUtils.Sname).equals( "1959N" )  ).findFirst().get();
-		eles1 = checkOffSpring( ele1, XmlUtils.Stally, 1);
+		ele2 = QprofilerXmlUtils.getOffspringElementByTagName(ele1, XmlUtils.variableGroupEle).stream()
+				.filter( e -> e.getAttribute(XmlUtils.Sname).equals( "tLen" )  ).findFirst().get();
+		eles1 = checkOffSpring( ele2, XmlUtils.Stally, 1);
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Svalue).equals( "175" )  ).count());
 		eles1 = checkOffSpring( ele1, XmlUtils.Sbin, 1);
 		assertEquals(1, eles1.stream().filter( e -> e.getAttribute(XmlUtils.Sstart).equals( "101" )  && e.getAttribute(XmlUtils.Scount).equals( "1" )  ).count());

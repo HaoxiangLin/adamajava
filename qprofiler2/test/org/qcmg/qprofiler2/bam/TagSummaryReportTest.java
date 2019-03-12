@@ -79,8 +79,7 @@ public class TagSummaryReportTest {
 	
 	private void checkXml(Element root){
 		 		
-		assertEquals( 2, QprofilerXmlUtils.getChildElementByTagName( root, XmlUtils.metricsEle ).size()  );
-				
+		assertEquals( 2, QprofilerXmlUtils.getChildElementByTagName( root, XmlUtils.metricsEle ).size()  );				
 		
 		//<sequenceMetrics name="tags:MD:Z">
 		Element metricE = getChildNameIs( root, XmlUtils.metricsEle, "tags:MD:Z" ).get(0);
@@ -103,14 +102,14 @@ public class TagSummaryReportTest {
 		}
 		
 		//check mutaiton type on forward reads
-		ele = getChildNameIs(metricE, XmlUtils.variableGroupEle, QprofilerXmlUtils.FirstOfPair+"Forward" ).get(0);
+		ele = getChildNameIs(metricE, XmlUtils.variableGroupEle, QprofilerXmlUtils.FirstOfPair+"ForwardStrand" ).get(0);
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).stream()
 			.filter(e -> e.getAttribute(XmlUtils.Svalue).equals("A>C") && e.getAttribute(XmlUtils.Scount).equals("2") ).count() );
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).stream()
 			.filter(e -> e.getAttribute(XmlUtils.Svalue).equals("T>A") && e.getAttribute(XmlUtils.Scount).equals("1") ).count() );		
 		
 		//check mutaiton type on reverse reads
-		ele = getChildNameIs( metricE, XmlUtils.variableGroupEle, QprofilerXmlUtils.FirstOfPair+"Reverse" ).get(0);
+		ele = getChildNameIs( metricE, XmlUtils.variableGroupEle, QprofilerXmlUtils.FirstOfPair+"ReverseStrand" ).get(0);
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).size());
 		assertEquals( 1, QprofilerXmlUtils.getOffspringElementByTagName(ele, XmlUtils.Stally).stream()
 				.filter(e -> e.getAttribute(XmlUtils.Svalue).equals("A>T") && e.getAttribute(XmlUtils.Scount).equals("1") ).count() );

@@ -50,17 +50,18 @@ public class ReadGroupSummary_PairTest {
 		//only record popular TLEN that is tLen < middleTlenValue) isize.increment(tLen);	
 		//1959N only one overlap pair tlen is 175
 		Element ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals("1959N")).findFirst().get(); 		
-		chekTlen(ele, new int[] { 1, 175, 175,175,175,175,0 });
+		chekTlen(ele, new int[] { 1, 175, 175, 175, 175, 175, 0 });
 		
 		ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals("1959T")).findFirst().get(); 		
 		chekTlen(ele, new int[] { 4, 13, 11025, 522, 13, 26, 867 });
 		
 		ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals(QprofilerXmlUtils.UNKNOWN_READGROUP)).findFirst().get(); 		
-		chekTlen(ele, new int[] { 0, 0, 0, 0, 0, 0, 0 });
+		//chekTlen(ele, new int[] { 0, 0, 0, 0, 0, 0, 0 });
+		chekTlen(ele, new int[] {1, 76, 76, 76, 76, 76, 0 });
 
 		//check after bamMetric
 		ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals("")).findFirst().get(); 		
-		chekTlen(ele, new int[] { 5, 13, 11025, 452, 13, 26, 788 });
+		chekTlen(ele, new int[] { 6, 13, 11025, 390, 13, 76, 733 });
 				
 		
 	}
@@ -72,11 +73,11 @@ public class ReadGroupSummary_PairTest {
 				
 		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, ReadGroupSummary.smin, String.valueOf(counts[1] )));
 		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, ReadGroupSummary.smax, String.valueOf(counts[2] )));
-		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, ReadGroupSummary.smean, String.valueOf(counts[3] )));
-		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, ReadGroupSummary.smode, String.valueOf(counts[4] )));	
-		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, ReadGroupSummary.smedian, String.valueOf(counts[5] )));
-		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, ReadGroupSummary.stdDev, String.valueOf(counts[6])));		
-		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, ReadGroupSummary.pairCount, String.valueOf(counts[0])));		
+		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, "meanUnderTlen5000", String.valueOf(counts[3] )));
+		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, "modeUnderTlen5000", String.valueOf(counts[4] )));	
+		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, "medianUnderTlen5000", String.valueOf(counts[5] )));
+		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, "stdDevUnderTlen5000", String.valueOf(counts[6])));		
+		assertTrue( ReadGroupSummary_ReadTest.checkChildValue(groupE, "pairCountUnderTlen5000", String.valueOf(counts[0])));		
 	
 	}
 		
@@ -106,7 +107,7 @@ public class ReadGroupSummary_PairTest {
 			.filter(e -> e.getAttribute(XmlUtils.Sname).equals(name) ).findFirst().get();
 		
 		List<Element> childEles = QprofilerXmlUtils.getChildElementByTagName(variableEle, XmlUtils.Svalue);
-		assertTrue( childEles.size() == 5 );
+		assertTrue( childEles.size() == 6 );
 
 		
 		
@@ -125,10 +126,11 @@ public class ReadGroupSummary_PairTest {
 		for(Element ele : childEles)
 			switch (ele.getAttribute(XmlUtils.Sname)) {
 			case "overlappedPairs": assertTrue( ele.getTextContent().equals(counts[0] + "") ); break;
-			case  "tlenUnder1500Pairs" : assertTrue( ele.getTextContent().equals(counts[1] + "") ); break;
+			case  "tlenOver0Under1500Pairs" : assertTrue( ele.getTextContent().equals(counts[1] + "") ); break;
 			case  "tlenOver10000Pairs" : assertTrue( ele.getTextContent().equals(counts[2] + "") ); break;
 			case  "tlenBetween1500And10000Pairs" : assertTrue( ele.getTextContent().equals(counts[3] + "") ); break;
 			case  "pairCount" : assertTrue( ele.getTextContent().equals(counts[4] + "") ); break;
+			case  "tlenis0Pairs" : assertTrue( ele.getTextContent().equals(counts[5] + "") ); break;
 			default: assertTrue(false); //not allowed
 		}
 	}
@@ -159,39 +161,43 @@ public class ReadGroupSummary_PairTest {
 	@Test
 	public void PairsByRGTest() throws Exception {
 		List<Element> pairEles =  QprofilerXmlUtils.getOffspringElementByTagName(this.root, XmlUtils.metricsEle)		
-				.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals( "pairs" )).collect(Collectors.toList());				
+				.stream().filter(ele -> ele.getAttribute(XmlUtils.Sname).equals( "pairs" )).collect(Collectors.toList());	
+		
+		//debug
+		QprofilerXmlUtils.asXmlText(root, "/Users/christix/Documents/Eclipse/data/qprofiler/bam/root.xml");
 		
 		//only one inward pair but overlapped
 		Element ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals("1959N")).findFirst().get(); 		
 		checkPairsValue(ele, 1, 0, 0);		
-		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,0,0} );
-		checkVariableGroup(ele, "f3f5Pair", new int[] {0,0,0,0,0} );
-		checkVariableGroup(ele, "outwardPair", new int[] {0,0,0,0,0} );
-		checkVariableGroup(ele, "inwardPair", new int[] {1,0,0,0,1} );
+		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,0,0,0} );
+		checkVariableGroup(ele, "f3f5Pair", new int[] {0,0,0,0,0,0} );
+		checkVariableGroup(ele, "outwardPair", new int[] {0,0,0,0,0,0} );
+		checkVariableGroup(ele, "inwardPair", new int[] {1,0,0,0,1,0} );
 
 		//five pairs
 		ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals("1959T")).findFirst().get();
 		checkPairsValue(ele, 5, 0, 0);		
-		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,1,1} ); //tlen=11205, 2015
-		checkVariableGroup(ele, "f3f5Pair", new int[] {1,0,1,0,2} );
-		checkVariableGroup(ele, "outwardPair", new int[] {2,0,0,0,2} );
-		checkVariableGroup(ele, "inwardPair", new int[] {0,0,0,0,0} );
+		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,1,1,0} ); //tlen=11205, 2015
+		checkVariableGroup(ele, "f3f5Pair", new int[] {1,0,1,0,2,0} );
+		checkVariableGroup(ele, "outwardPair", new int[] {2,0,0,0,2,0} );
+		checkVariableGroup(ele, "inwardPair", new int[] {0,0,0,0,0,0} );	
 		
-		//
 		ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals(QprofilerXmlUtils.UNKNOWN_READGROUP)).findFirst().get();
-		checkPairsValue(ele, 3, 2, 1);		
-		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,0,0} ); //tlen=11205, 2015
-		checkVariableGroup(ele, "f3f5Pair", new int[] {0,0,0,0,0} );
-		checkVariableGroup(ele, "outwardPair", new int[] {0,0,0,0,0} );
-		checkVariableGroup(ele, "inwardPair", new int[] {0,0,0,0,0} );
+		checkPairsValue(ele, 4, 1, 1);		
+		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,0,0,0} ); //tlen=11205, 2015
+		checkVariableGroup(ele, "f3f5Pair", new int[] {0,0,0,0,0,0} );
+		checkVariableGroup(ele, "outwardPair", new int[] {0,0,0,0,0,0} );
+		checkVariableGroup(ele, "inwardPair", new int[] {0,0,0,0,0,0} );
+		checkVariableGroup(ele, "otherPair", new int[] {1,0,0,0,2,1} );
 				
 		//overall
 		ele = pairEles.stream().filter(e -> ( (Element) e.getParentNode()).getAttribute(XmlUtils.Sname).equals("")).findFirst().get();		
-		checkPairsValue(ele, 9, 2, 1);		
-		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,1,1} ); //tlen=11205, 2015
-		checkVariableGroup(ele, "f3f5Pair", new int[] {1,0,1,0,2}  );
-		checkVariableGroup(ele, "outwardPair", new int[] {2,0,0,0,2} );
-		checkVariableGroup(ele, "inwardPair", new int[] {1,0,0,0,1} );		
+		checkPairsValue(ele, 10, 1, 1);		
+		checkVariableGroup(ele, "f5f3Pair", new int[] {0,0,0,1,1,0} ); //tlen=11205, 2015
+		checkVariableGroup(ele, "f3f5Pair", new int[] {1,0,1,0,2,0}  );
+		checkVariableGroup(ele, "outwardPair", new int[] {2,0,0,0,2,0} );
+		checkVariableGroup(ele, "inwardPair", new int[] {1,0,0,0,1,0} );
+		checkVariableGroup(ele, "otherPair", new int[] {1,0,0,0,2,1} );
 	}	
 	
 	public static void createPairInputFile(String fname) throws IOException{
@@ -226,6 +232,16 @@ public class ReadGroupSummary_PairTest {
 		//non-canonical pair noRG and mate different ref
 		data.add("NS500239:c	83	chr1	7480169	0	75M	chr2	10	0	AATGAATAGAAGGGTCCAGATCCAGTTCTAATTTGGGGTAGGGACTCAGTTTGTGTTTTTTCACGAGATGAAGAT	" + 
 				"EEEA<EEEEEE<<EE/AEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEAEEEEEEEAAAAA	NH:i:14	HI:i:11	AS:i:73	NM:i:0	MD:Z:75	");
+
+		//debug
+		//first pair noRG and fully overlap with tLen > 0 since pair with different orientation
+		data.add("NS500239:d	83	chr1	7480169	0	75M	=	7480169	76	AATGAATAGAAGGGTCCAGATCCAGTTCTAATTTGGGGTAGGGACTCAGTTTGTGTTTTTTCACGAGATGAAGAT	" + 
+				"EEEA<EEEEEE<<EE/AEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEAEEEEEEEAAAAA	NH:i:14	HI:i:11	AS:i:73	NM:i:0	MD:Z:75	");
+
+		//first pair noRG and fully overlap with tLen == 0 since pair with same orientation
+		data.add("NS500239:d	65	chr1	7480169	0	75M	=	7480169	0	AATGAATAGAAGGGTCCAGATCCAGTTCTAATTTGGGGTAGGGACTCAGTTTGTGTTTTTTCACGAGATGAAGAT	" + 
+				"EEEA<EEEEEE<<EE/AEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEAEEEEEEEEAEEEEEEEAAAAA	NH:i:14	HI:i:11	AS:i:73	NM:i:0	MD:Z:75	");
+
 		
 		//noRG: pairNumber==0
 		//1959N: pairNumber==1, inward overlapped pair
