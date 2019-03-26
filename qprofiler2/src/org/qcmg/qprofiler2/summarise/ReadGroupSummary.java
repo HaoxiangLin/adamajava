@@ -1,5 +1,7 @@
 package org.qcmg.qprofiler2.summarise;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.qcmg.common.model.QCMGAtomicLongArray;
@@ -7,18 +9,15 @@ import org.qcmg.common.util.QprofilerXmlUtils;
 import org.qcmg.picard.util.PairedRecordUtils;
 import org.qcmg.qprofiler2.util.XmlUtils;
 import org.w3c.dom.Element;
+
+import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
 
 public class ReadGroupSummary {
 	//xml node name 	
-	public final static String node_readgroup = "readGroup";
-	public final static String node_other = "otherPair";
-	public final static String node_f5f3 = "f5f3Pair";
-	public final static String node_f3f5 = "f3f5Pair";
-	public final static String node_inward = "inwardPair";
-	public final static String node_outward = "outwardPair";		
+	public final static String node_readgroup = "readGroup";		
 	public final static String node_softClip = "softClippedBases";
 	public final static String node_trim = "trimmedBases";	
 	public final static String node_hardClip = "hardClippedBases";
@@ -44,22 +43,14 @@ public class ReadGroupSummary {
 	public final static String sbasePercent = "basePercent"; 
 	public static final String sbaseCount = "baseCount"; //"countedBase"
 	
-	//fixed value
-	public final static int bigTlenValue = 10000;
-	public final static int smallTlenValue = 1500;
-	public final static int middleTlenValue = 5000;
-	public final static int rangeGap = 100;
  			
 	//softclips, hardclips, read length; 	
 	QCMGAtomicLongArray softClip = new QCMGAtomicLongArray(128);
 	QCMGAtomicLongArray hardClip = new QCMGAtomicLongArray(128);
-	QCMGAtomicLongArray readLength = new QCMGAtomicLongArray(128);
-	QCMGAtomicLongArray overlapBase = new QCMGAtomicLongArray(128);	
-		 
-	//QCMGAtomicLongArray.get(arrayTlenLimit) for tlen=[bigTlenValue, ~)
-	QCMGAtomicLongArray isize1 = new QCMGAtomicLongArray(bigTlenValue + 1);	//previous method
-	QCMGAtomicLongArray isize = new QCMGAtomicLongArray(middleTlenValue);	 //store count bwt [0, 1499]
-	QCMGAtomicLongArray isizeRange = new QCMGAtomicLongArray( (bigTlenValue/rangeGap) + 1);	//store count bwt [0/100, 10000/100]
+	QCMGAtomicLongArray readLength = new QCMGAtomicLongArray(128);		
+	QCMGAtomicLongArray isize = new QCMGAtomicLongArray(PairSummary.middleTlenValue);	 //store count bwt [0, 1499]
+	private final ConcurrentMap<String, AtomicLong> cigarValuesCount = new ConcurrentHashMap<String, AtomicLong>();
+
 	AtomicInteger max_isize = new AtomicInteger(); 
 	
 	//bad reads inforamtion
@@ -73,11 +64,11 @@ public class ReadGroupSummary {
 	
 	//pairing information	
 	AtomicLong pairNum  = new AtomicLong();
-	PairedRead f3f5 = new PairedRead( node_f3f5 );
-	PairedRead f5f3 = new PairedRead( node_f5f3 );
-	PairedRead inward = new PairedRead( node_inward );
-	PairedRead outward = new PairedRead( node_outward );
-	PairedRead otherPair = new PairedRead( node_other );
+	PairSummary f3f5 = new PairSummary( PairSummary.Pair.F3F5);
+	PairSummary f5f3 = new PairSummary(PairSummary.Pair.F5F3 );
+	PairSummary inward = new PairSummary( PairSummary.Pair.Inward );
+	PairSummary outward = new PairSummary( PairSummary.Pair.Outward );
+	PairSummary otherPair = new PairSummary( PairSummary.Pair.NotProper );
 	
 	//pair in different reference
 	AtomicLong diffRef  = new AtomicLong();	
@@ -137,74 +128,7 @@ public class ReadGroupSummary {
 		return trimedRead;
 	}
 	
- 	private class PairedRead {
- 		private final String name;		
- 		PairedRead(String name){this.name = name;}
- 		
-		AtomicLong overlap = new AtomicLong();
-		AtomicLong zero = new AtomicLong();
-		AtomicLong near = new AtomicLong();
-		AtomicLong far = new AtomicLong();
-		AtomicLong bigTlen  = new AtomicLong();			
-		AtomicLong recordSum  = new AtomicLong();
-		
-//		//debug
-//		private int debugOutNo = 3;
-//		private int overlapOutNo = 3;		
-		void parse(SAMRecord record, Integer overlapBase ){		
-			recordSum.getAndIncrement();
-			
-			//non-canonical reads eg. F3F5, F5F3
-			if(overlapBase == null) {	
-				overlapBase = PairedRecordUtils.getOverlapBase( record);
-			}
-					
-			//classify tlen groups
-			if( overlapBase > 0 ){
-				overlap.incrementAndGet();	
-//				if( overlapOutNo  > 0 && !QprofilerXmlUtils.All_READGROUP.equals(readGroupId)) {
-//					System.out.println( name + overlapOutNo + " (overlap):: " + record.getSAMString());
-//					overlapOutNo --;
-//				}
-			}else if(record.getInferredInsertSize() == 0) {
-				zero.incrementAndGet();
-//				//debug
-//				if(debugOutNo > 0 && !QprofilerXmlUtils.All_READGROUP.equals(readGroupId)) {
-//					System.out.println(name + debugOutNo + " (tLenZero):: " + record.getSAMString());
-//					debugOutNo --;
-//				}
-			} else if( record.getInferredInsertSize() < smallTlenValue  ){
-				near.incrementAndGet();					
-			} else if( record.getInferredInsertSize() >= smallTlenValue && record.getInferredInsertSize() < bigTlenValue ){
-				far.incrementAndGet();	
-			}else if(record.getInferredInsertSize() >= bigTlenValue){
-				bigTlen.incrementAndGet();
-			} 			
-		}		
-		
-		/**
-		 * output example: 	 
-		 *  <variableGroup name="outwardPair">
-				<value name="overlappedPairs">898775</value>
-				<value name="tlenUnder1500Pairs">219588</value>
-				<value name="tlenOver10000Pairs">572986</value>
-				<value name="tlenBetween1500And10000Pairs">237035</value>
-				<value name="pairCount">1928384</value>
-			</variableGroup>
-		 * @param parent element
-		 */
-		
-		void toXml(Element parent  ){			
-			Element stats = XmlUtils.createGroupNode(parent, name);
-			XmlUtils.outputValueNode(stats, "overlappedPairs", overlap.get());
-			XmlUtils.outputValueNode(stats, "tlenis0Pairs", zero.get() );
-			XmlUtils.outputValueNode(stats, "tlenOver0Under1500Pairs", near.get() );		 
-			XmlUtils.outputValueNode(stats, "tlenOver10000Pairs", bigTlen.get()  );
-			XmlUtils.outputValueNode(stats, "tlenBetween1500And10000Pairs",far.get() );
-			XmlUtils.outputValueNode(stats, "pairCount", recordSum.get()  );
-			
-		}		
-	}
+
 		
 	/**
 	 * classify record belongs (duplicate...) and count the number. If record is parsed, then count the hard/soft clip bases, pair mapping overlap bases and pairs information
@@ -227,11 +151,15 @@ public class ReadGroupSummary {
 			failedVendorQuality.incrementAndGet();
 			return false;
 		} 
-			
+		
+		//debug
+		parseCigar(record.getCigar());
+		
 		//find the max read length	
 		if(record.getReadLength() > this.maxReadLength) {
 			this.maxReadLength = record.getReadLength();			
 		}
+		
 		//find mapped badly reads and return false	
 		if(record.getReadUnmappedFlag() ){
 			unmapped.incrementAndGet();
@@ -241,7 +169,7 @@ public class ReadGroupSummary {
 			return false;
 		}else if(! PairedRecordUtils.isCanonical( record ) ){
 			nonCanonical.incrementAndGet();
-			parsePairing( record , null); 	
+			parsePairing( record ); 	
 			return false;
 		}
 		
@@ -263,25 +191,45 @@ public class ReadGroupSummary {
 		if(lwithHard > this.maxReadLength)
 			this.maxReadLength = lwithHard;
 		 		
-		//parse overlap
-		int overlap = PairedRecordUtils.getOverlapBase(record);
-		if(overlap > 0) {
-			overlapBase.increment(overlap);
-		}
-		parsePairing( record , overlap); 				
+		//parse overlap, we can get counts from all pairSummary
+//		int overlap = PairedRecordUtils.getOverlapBase(record);
+//		if(overlap > 0) {
+//			overlapBase.increment(overlap);
+//		}
+		parsePairing( record); 				
 		return true; 			
  
 	}
+	//debug
+	private void parseCigar(Cigar cigar) {
+		if (null != cigar)  return;
+		
+		for (CigarElement ce : cigar.getCigarElements()) {
+			CigarOperator operator = ce.getOperator();
+			if ( ! CigarOperator.M.equals(operator)) {
+				String key = "" + ce.getLength() + operator;
+				cigarValuesCount.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();					
+			}			 
+		}	 
+	}
 	
+	public ConcurrentMap<String, AtomicLong> getCigarCount() {		 
+		return cigarValuesCount;
+	}
 	
 	public QCMGAtomicLongArray getOverlapCount(){
+		QCMGAtomicLongArray overlapBase = new QCMGAtomicLongArray(PairSummary.segmentSize);	
+		 
+		//canonical pair already belong to lost, here only output pair with different orientation
+		for(int i = 0; i < PairSummary.segmentSize; i ++) {
+			overlapBase.increment(i, inward.getoverlapCounts().get(i) );
+			overlapBase.increment(i, outward.getoverlapCounts().get(i) );			
+		}
+						
 		return overlapBase;
 	}
 	public QCMGAtomicLongArray getISizeCount(){
 		return isize;
-	}
-	public QCMGAtomicLongArray getISizeRangeCount(){
-		return isizeRange;
 	}
 	
 	/**
@@ -293,9 +241,12 @@ public class ReadGroupSummary {
 	 * @param record: a mapped and paired read and not duplicate, not supplementary, secondary or failed
 	 * @param overlapBase
 	 */
-	public void parsePairing( SAMRecord record, Integer overlapBase ){
-		//skip non-paired reads, and reads with tlen minus
-		if( !record.getReadPairedFlag() || record.getInferredInsertSize() < 0 )  return;  
+	public void parsePairing( SAMRecord record ){
+		//skip non-paired reads, not proper mapped and reads with tlen minus
+		if( !record.getReadPairedFlag() || !record.getProperPairFlag() || 
+				record.getReadUnmappedFlag() || record.getMateUnmappedFlag() || record.getInferredInsertSize() < 0 ) {
+			return;  
+		}
 		
 		//if tlen unvaliable, discard them unless it is first of pair
 		if( record.getInferredInsertSize() == 0 && !record.getFirstOfPairFlag()) return;
@@ -303,7 +254,7 @@ public class ReadGroupSummary {
 		//record pair number; pairNum >= sum(f3f5, f5f3,inward,outward, diffRef, mateUnmapped)	
 		pairNum.incrementAndGet();
 				
-		//normally bam reads are mapped, if the mate is missing, we still count it to pair but no detailed pair information
+		//normally bam reads are mapped, if the mate is missing, we still count it to pair but no detailed pair` information
 		if( record.getMateUnmappedFlag() ){ mateUnmapped.incrementAndGet();  return;  }
 		
 		//pair from different reference, only look at first pair to avoid double counts
@@ -311,30 +262,26 @@ public class ReadGroupSummary {
 			diffRef.incrementAndGet();	
 			return; 
 		}
-														
-		//waringing: 
-		//both pair with tlen >0 it is hardly happen, bad value but picard accept it
-		//proper pair with tlen > 0 disregard first or second of pair		
-		//another reason is impossible to caculate overlapBase since getOverlapBase( record) return 0 if tlen<=0	
-						
-		if( PairedRecordUtils.isF5toF3(record)) f5f3.parse( record, overlapBase ); 		
-		else if( PairedRecordUtils.isF3toF5(record)) f3f5.parse( record, overlapBase );	 
-		else if( PairedRecordUtils.isOutward(record)) outward.parse( record, overlapBase );		
-		else if( PairedRecordUtils.isInward(record)) inward.parse( record, overlapBase );
-		//record pairs which we can't recognize
-		else { otherPair.parse(record, overlapBase); }
-		
-		
-		//record tlen
+
 		int tLen =  record.getInferredInsertSize();	
 		//record the maxmum tlen value
-		if( record.getInferredInsertSize() > max_isize.get() ) max_isize.getAndSet( tLen );		
-		if(tLen > bigTlenValue )  tLen = bigTlenValue+1;	//can't handle too big tlen
-		//record region for all pair  
-		isizeRange.increment( (tLen/rangeGap));			
-		//only record popular TLEN
-		if(tLen < middleTlenValue) isize.increment(tLen);
-			
+ 		if( record.getInferredInsertSize() > max_isize.get() ) max_isize.getAndSet( tLen );	
+
+ 		//to avoid double counts, we only select one of Pair: tLen > 0 or firstOfPair with tLen==0;
+ 		//RAM is expensive, we can't record tLen > 5000;
+ 		if( (tLen == 0 && record.getFirstOfPairFlag()) || (tLen > 0 && tLen < PairSummary.middleTlenValue) ) {
+ 			isize.increment(tLen);	
+  		}
+														
+		//waringing: 
+		//both pair with tlen >0 it is hardly happen, bad value but picard accept it				 
+		PairSummary.Pair pairType = PairSummary.getPairType(record);
+		if( PairSummary.Pair.F5F3.equals(pairType) ) f5f3.parse( record ); 		
+		else if( PairSummary.Pair.F3F5.equals(pairType) ) f3f5.parse( record );	 
+		else if(  PairSummary.Pair.Outward.equals(pairType) ) outward.parse( record );		
+		else if(  PairSummary.Pair.Inward.equals(pairType) ) inward.parse( record );
+ 		 
+		//record pairs which we can't recognize	
  	}
 			
 	public long getDiscardreads() {
@@ -427,7 +374,7 @@ public class ReadGroupSummary {
 					
 		lostBase += lostBaseStats( rgElement, node_softClip, softClip, this.maxBases );
 		lostBase += lostBaseStats( rgElement, node_hardClip, hardClip, this.maxBases );
-		lostBase += lostBaseStats( rgElement, node_overlap, overlapBase, this.maxBases );
+		lostBase += lostBaseStats( rgElement, node_overlap, getOverlapCount(), this.maxBases );
 		XmlUtils.addCommentChild(( Element )rgElement.getLastChild(), "Only count overlapped bases on strand for pairs which have a positive TLEN value.");
 		
 		//create node for overall
@@ -462,62 +409,53 @@ public class ReadGroupSummary {
 	 	 
 	public void pairSummary2Xml( Element parent ) { 
 		//add to xml RG_Counts
-		Element ele =  XmlUtils.createMetricsNode(parent, "pairs", pairNum.get());
-
-		
+		Element ele =  XmlUtils.createMetricsNode(parent, "pairs", pairNum.get());		
 		Element ele1 = XmlUtils.createGroupNode(ele, "unPaired");
 		XmlUtils.outputValueNode( ele1, "mateUnmappedPair", mateUnmapped.get() );
 		XmlUtils.outputValueNode( ele1, "mateDifferentReferencePair", diffRef.get() );
 		
-		f5f3.toXml( ele );
-		f3f5.toXml( ele );
-		inward.toXml( ele );
-		outward.toXml( ele );
-		otherPair.toXml(ele);
-		
-
+		f5f3.toSummaryXml( ele );
+		f3f5.toSummaryXml( ele );
+		inward.toSummaryXml( ele );
+		outward.toSummaryXml( ele );
+		otherPair.toSummaryXml(ele);
+	 
 		//output tlen refer to method lostBaseStats(...)
 		long sum = 0, no = 0;
-		for(int i = 1; i < middleTlenValue; i ++ ){
+		for(int i = 1; i < PairSummary.middleTlenValue; i ++ ){
 			sum += isize.get(i) * i;
 			no += isize.get(i);
-		}		
+		}	
+		
 		int mean = (no == 0) ? 0: (int) (sum / no);		
-		int min = 0; //find the smallest non-zero value;
-		for(int i = 1; i < middleTlenValue; i ++) {
-			if(isize.get(i) > 0){ 
-				min  = i; break; 
-			}
-		}		 
-		int medium = 0;  	
-		// to avoid isize.get(0) >= 0 since 1(counts)/2== 0(counts/2) == 0
-		for (int i = 1,  total1 = 0 ; i < middleTlenValue; i++) {
-			if(( total1 += isize.get(i)) > no/2 ){  
-				medium = i;   break; 
-			}
-		}
 		int mode = 0; //mode is the number of read which length is most popular
 		long highest = 0;
 		double sd = 0;
-		for (int i = 1 ; i < middleTlenValue ; i++) {	
+		for (int i = 1 ; i < PairSummary.middleTlenValue ; i++) {	
 			//the number of isize.get(i) pairs have same isize value 
 			sd += Math.pow(( i - mean), 2) * isize.get(i) / no;
 			if(isize.get(i) > highest){ highest = isize.get(i); mode = i;  } 
 		}
 		double standardDeviation = Math.sqrt(sd);
 		
-		//tlen section 
-		ele1 = XmlUtils.createGroupNode(ele, "tlen");
-		XmlUtils.outputValueNode(ele1, smax, this.max_isize.get());
-		XmlUtils.outputValueNode(ele1, smin, min);		
+		//create node for overall, tLen
+		Element overallEle = XmlUtils.createGroupNode(ele, QprofilerXmlUtils.overall );
+		XmlUtils.outputValueNode(overallEle, "maxTlen", this.max_isize.get());
+		XmlUtils.outputValueNode(overallEle, "paircount", ( f5f3.getPairCounts() +  f3f5.getPairCounts() + inward.getPairCounts() + outward.getPairCounts() ) );	
 
-		ele1.appendChild(ele1.getOwnerDocument().createComment("below stats is based on tlen value < " + middleTlenValue));
-		XmlUtils.outputValueNode(ele1, "meanUnderTlen5000", mean);
-		XmlUtils.outputValueNode(ele1, "modeUnderTlen5000", mode);	
-		XmlUtils.outputValueNode(ele1, "medianUnderTlen5000", medium);
-		XmlUtils.outputValueNode(ele1, "pairCountUnderTlen5000", no);		
-		XmlUtils.outputValueNode( ele1, "stdDevUnderTlen5000", (int)standardDeviation);			
+		overallEle.appendChild(overallEle.getOwnerDocument().createComment("below stats is based on tlen value < " + PairSummary.middleTlenValue));
+		XmlUtils.outputValueNode(overallEle, "meanUnderTlen5000", mean);
+		XmlUtils.outputValueNode(overallEle, "modeUnderTlen5000", mode);	
+		XmlUtils.outputValueNode(overallEle, "pairCountUnderTlen5000", no);		
+		XmlUtils.outputValueNode( overallEle, "stdDevUnderTlen5000", (int)standardDeviation);			
 
+	}
+	
+	public void pairTlen2Xml( Element parent ) {
+		inward.toTlenXml( parent );
+		outward.toTlenXml( parent );
+		f3f5.toTlenXml( parent );
+		f5f3.toTlenXml( parent );
 	}
 	
 	private void badReadStats(Element parent, String nodeName, long reads, long badBase ){
@@ -589,5 +527,7 @@ public class ReadGroupSummary {
 		}
 		return array;
 	}
+
+
 
 }

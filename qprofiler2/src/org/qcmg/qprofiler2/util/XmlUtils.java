@@ -1,11 +1,14 @@
 package org.qcmg.qprofiler2.util;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import org.qcmg.common.util.QprofilerXmlUtils;
 import org.qcmg.common.vcf.header.VcfHeader;
@@ -207,35 +210,50 @@ public class XmlUtils {
     }
     
     
-    private static <T> void outputTallys( Element ele, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
+    private static <T> void outputTallys( Element ele, String name, Map<T, AtomicLong> tallys, boolean hasPercent) {
     	
     	double sum = hasPercent ? tallys.values().stream().mapToDouble( x -> (double) x.get() ).sum() : 0;	
-		for(Entry<T,  AtomicLong> entry : tallys.entrySet()) { 
+    	
+    	//sort key value if integer
+    	Set<T> sorted = tallys.keySet();   	   	
+//    	T firstKey =   tallys.keySet().stream().findFirst().get();   	
+//    	if(firstKey instanceof Integer )
+//			sorted = sorted.stream().sorted(Comparator.comparingInt(e -> (Integer) e)).collect(Collectors.toSet());
+    
+    	for(T t: sorted) {
 			//skip zero value for output
-			if(entry.getValue().get() == 0 ) continue;
-			double percent = (sum == 0)? 0 : 100 * (double)entry.getValue().get() / sum;
+			if(tallys.get(t).get() == 0 ) continue;
+			double percent = (sum == 0)? 0 : 100 * (double)tallys.get(t).get() / sum;
 			Element ele1 = QprofilerXmlUtils.createSubElement( ele, Stally );
-			ele1.setAttribute( Svalue, String.valueOf( entry.getKey() ));
-			ele1.setAttribute( Scount, String.valueOf( entry.getValue().get() )); 
+			ele1.setAttribute( Svalue, String.valueOf( t ));
+			ele1.setAttribute( Scount, String.valueOf( tallys.get(t).get() )); 
 			if( hasPercent == true) {
 				ele1.setAttribute(Spercent, String.format("%,.2f", percent));	
-			}
+			}					
 		}  	
-    	
+    	long counts = tallys.values().stream().mapToLong( x -> (long) x.get() ).sum() ;	
+    	ele.setAttribute(Scount, counts+"");
     	
     }
-   
-    public static <T> void outputTallyGroup( Element parent, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
+    
+    public static <T> void outputTallyGroup( Element parent, String name, Map<T, AtomicLong> tallys, boolean hasPercent, String comment ) {
     	if(tallys == null || tallys.isEmpty()) return;
     	       	
-    	Element ele = createGroupNode( parent, name);	//<category>       	
+    	Element ele = createGroupNode( parent, name);	//<category>      
+    	
+    	if( comment != null ) 
+    		ele.appendChild( ele.getOwnerDocument().createComment(comment) );	
 		
     	outputTallys(  ele,  name,  tallys,  hasPercent );
       	
     }
+   
+    public static  <T> void outputTallyGroup( Element parent, String name, Map< T, AtomicLong> tallys, boolean hasPercent ) {
+    	outputTallyGroup(  parent,  name,  tallys,  hasPercent, null );    	
+    }
     
     
-    public static <T> void outputCycleTallyGroup( Element parent, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
+    public static <T>  void outputCycleTallyGroup( Element parent, String name, Map<T, AtomicLong> tallys, boolean hasPercent ) {
     	if(tallys == null || tallys.isEmpty()) return;
     	       	
     	Element ele = QprofilerXmlUtils.createSubElement( parent,  baseCycleEle );	

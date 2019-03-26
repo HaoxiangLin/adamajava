@@ -24,7 +24,7 @@ import htsjdk.samtools.SAMTagUtil;
 public class TagSummaryReport2 {
 
 	public final static int additionTagMapLimit = 200;
-	public final static int errReadLimit  = 100;	
+	public final static int errReadLimit  = 10;	
 	public final static String seperator = Constants.COLON_STRING;	
 
 	private final static SAMTagUtil STU = SAMTagUtil.getSingleton();

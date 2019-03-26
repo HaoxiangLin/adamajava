@@ -88,12 +88,12 @@ public class BamSummarizerTest {
 
 	
 	private void testSummaryReport(BamSummaryReport2 sr) {
-		// ceegars
-		assertEquals(1, sr.getCigarValuesCount().get("13H").get());
-		assertEquals(1, sr.getCigarValuesCount().get("15H").get());
-		assertEquals(1, sr.getCigarValuesCount().get("8H").get());
-		assertEquals(1, sr.getCigarValuesCount().get("22H").get());
-		assertEquals(1, sr.getCigarValuesCount().get("10H").get());
+//		// cigars
+//		assertEquals(1, sr.getCigarValuesCount().get("13H").get());
+//		assertEquals(1, sr.getCigarValuesCount().get("15H").get());
+//		assertEquals(1, sr.getCigarValuesCount().get("8H").get());
+//		assertEquals(1, sr.getCigarValuesCount().get("22H").get());
+//		assertEquals(1, sr.getCigarValuesCount().get("10H").get());
 		
 		// seq by cycle
 		// position 1

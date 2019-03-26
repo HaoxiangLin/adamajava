@@ -68,7 +68,7 @@ public class BamSummaryReport2 extends SummaryReport {
 	@SuppressWarnings("unchecked")
 	private final CycleSummary<Integer>[] qualByCycleInteger = new CycleSummary[]{new CycleSummary<Integer>(ii, 512), new CycleSummary<Integer>(ii, 512), new CycleSummary<Integer>(ii, 512)};
 	private final QCMGAtomicLongArray[] qualBadReadLineLengths = new QCMGAtomicLongArray[]{new QCMGAtomicLongArray(128), new QCMGAtomicLongArray(128), new QCMGAtomicLongArray(128)};
-	private final ConcurrentMap<String, AtomicLong> cigarValuesCount = new ConcurrentHashMap<String, AtomicLong>();
+//	private final ConcurrentMap<String, AtomicLong> cigarValuesCount = new ConcurrentHashMap<String, AtomicLong>();
 	private final QCMGAtomicLongArray[] mapQualityLengths = new QCMGAtomicLongArray[]{new QCMGAtomicLongArray(256), new QCMGAtomicLongArray(256), new QCMGAtomicLongArray(256)};
 	
 	// FLAGS
@@ -229,35 +229,62 @@ public class BamSummaryReport2 extends SummaryReport {
         
         for(String rg : readGroups ) {
         	String rgName = (readGroups.size() == 1 && rg.equals(QprofilerXmlUtils.UNKNOWN_READGROUP))? null : rg;
-        	Element ele = XmlUtils.createMetricsNode( XmlUtils.createReadGroupNode(parent, rgName), null, null);
-       	
-        	//output isize
-        	QCMGAtomicLongArray iarray= rgSummaries.get(rg).getISizeCount(); 
-        	Map<String, AtomicLong> tallys =  iarray.toMap().entrySet().stream().collect(Collectors.toMap(e -> String.valueOf( e.getKey()  ), Map.Entry::getValue));
-        	XmlUtils.outputTallyGroup( ele,  "tLen",  tallys, false );  
+        	//output tLen inside pairSummary, eg. inward, f3f5
+        	rgSummaries.get(rg).pairTlen2Xml(XmlUtils.createReadGroupNode(parent, rgName));
         	
-        	//output isize range
-        	iarray= rgSummaries.get(rg).getISizeRangeCount();
-        	if(iarray.toMap().size() == 0) continue;
-        	Element cateEle = XmlUtils.createGroupNode(ele, "tLenByBin");
-        	for(int i = 0; i < iarray.length(); i ++) {
-        		if(iarray.get(i) == 0) continue;
-        		int start = i * ReadGroupSummary.rangeGap + 1;
-        		int end = (i+1)* ReadGroupSummary.rangeGap;
-        		XmlUtils.outputBinNode( cateEle, start, end, iarray.get(i) );
-        	}
-        	        	
+//        	//output isize overall
+//        	Element ele = XmlUtils.createMetricsNode( rgEle, "tLenOverall", null);
+//        	QCMGAtomicLongArray iarray= rgSummaries.get(rg).getISizeCount(); 
+//        	Map<String, AtomicLong> tallys =  iarray.toMap().entrySet().stream().collect(Collectors.toMap(e -> String.valueOf( e.getKey()  ), Map.Entry::getValue));
+//        	XmlUtils.outputTallyGroup( ele,  "tLen",  tallys, false );  
+//        	//output isize range
+//        	iarray= rgSummaries.get(rg).getISizeRangeCount();
+//        	if(iarray.toMap().size() == 0) continue;
+//        	Element cateEle = XmlUtils.createGroupNode(ele, "tLenByBin");
+//        	for(int i = 0; i < iarray.length(); i ++) {
+//        		if(iarray.get(i) == 0) continue;
+//        		int start = i * ReadGroupSummary.rangeGap + 1;
+//        		int end = (i+1)* ReadGroupSummary.rangeGap;
+//        		XmlUtils.outputBinNode( cateEle, start, end, iarray.get(i) );
+//        	}      	        	
         	//output overlap   	
-        	iarray= rgSummaries.get(rg).getOverlapCount();    
-        	tallys =  iarray.toMap().entrySet().stream().collect(Collectors.toMap(e -> String.valueOf( e.getKey()  ), Map.Entry::getValue));
-        	XmlUtils.outputTallyGroup( ele,  "overlapBases",  tallys, false );         	
+//        	iarray= rgSummaries.get(rg).getOverlapCount();    
+//        	tallys =  iarray.toMap().entrySet().stream().collect(Collectors.toMap(e -> String.valueOf( e.getKey()  ), Map.Entry::getValue));
+//        	XmlUtils.outputTallyGroup( ele,  "overlapBases",  tallys, false );         	
         }	
 	}			
 	private void createCigar(Element parent) {
-		Map<String, AtomicLong> tallys = new TreeMap<>(new CigarStringComparator());
-		tallys.putAll(	cigarValuesCount);
-		XmlUtils.outputTallyGroup( XmlUtils.createMetricsNode(parent, null, null),QprofilerXmlUtils.cigar , tallys, true );		
+//		Map<String, AtomicLong> tallys = new TreeMap<>(new CigarStringComparator());
+//		tallys.putAll(	cigarValuesCount);
+//		XmlUtils.outputTallyGroup( XmlUtils.createMetricsNode(parent, null, null),QprofilerXmlUtils.cigar , tallys, true );	
+				
+        Set<String> readGroups =  rgSummaries.keySet();
+        readGroups.remove(QprofilerXmlUtils.All_READGROUP);       
+        parent = QprofilerXmlUtils.createSubElement(parent, XmlUtils.readGroupsEle );  
+        
+        for(String rg : readGroups ) {
+        	String rgName = (readGroups.size() == 1 && rg.equals(QprofilerXmlUtils.UNKNOWN_READGROUP))? null : rg;
+        	Element ele = XmlUtils.createMetricsNode( XmlUtils.createReadGroupNode(parent, rgName), null, null);
+        	ele = XmlUtils.createMetricsNode(ele, null, null);
+        	
+        	//add comment
+        	String comment = "cigar string from reads including duplicateReads, nonCanonicalPairs and unmappedReads but excluding discardedReads (failed, secondary and supplementary).";
+        	ele.appendChild( ele.getOwnerDocument().createComment(comment) );
+        	
+        	Map<String, AtomicLong> tallys = new TreeMap<>(new CigarStringComparator());
+        	tallys.putAll(	rgSummaries.get(rg).getCigarCount() );
+        	XmlUtils.outputTallyGroup( ele ,QprofilerXmlUtils.cigar , tallys, true );	
+        	
+        	
+//    		//comment example
+//    		comment = slostBase +  (readGroupId.equals(QprofilerXmlUtils.All_READGROUP)? 
+//    				": the sum of " + slostBase + " from all read group" 	: 	": readMaxLength * (duplicateReads + nonCanonicalPairs + unmappedReads) + trimmedBases + softClippedBases + hardClippedBases + overlappedBases");
+//    		overallEle.appendChild( overallEle.getOwnerDocument().createComment(comment) );		
+//    		XmlUtils.outputValueNode( overallEle, slostBase,  lostBase);	
+
+        }		
 	}	
+	
 	private void createRNAME(Element parent){		
 		if (null == samSeqDictionary) return;				
 		Map<String, AtomicLong> tallys = new TreeMap<>(new ReferenceNameComparator());		
@@ -363,32 +390,33 @@ public class BamSummaryReport2 extends SummaryReport {
 		mapQualityLengths[order].increment(mapQ);
 
 		// only TAGS, FLAGS, and CIGARS are always summarised
+//		parseCigar(record.getCigar());		
 		tagReport.parseTAGs(record);
-		parseCigar(record.getCigar());
 		flagIntegerCount.increment(record.getFlags());
+		
 	}
 	
-	void parseCigar(Cigar cigar) {
-		if (null != cigar) {
-			int length = 0;
+//	void parseCigar(Cigar cigar) {
+//		if (null != cigar) {
+//			int length = 0;
+//
+//			for (CigarElement ce : cigar.getCigarElements()) {
+//				CigarOperator operator = ce.getOperator();
+//				if ( ! CigarOperator.M.equals(operator)) {
+//					String key = "" + ce.getLength() + operator;
+//					cigarValuesCount.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();					
+//					//SummaryByCycleUtils.incrementCount(cigarValuesCount, "" + ce.getLength() + operator);
+//				}
+//				length += getSizeFromInt(ce.getLength()) + 1;
+//			}
+//			cigarLengths.increment(length);
+//		}
+//	}
 
-			for (CigarElement ce : cigar.getCigarElements()) {
-				CigarOperator operator = ce.getOperator();
-				if ( ! CigarOperator.M.equals(operator)) {
-					String key = "" + ce.getLength() + operator;
-					cigarValuesCount.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();					
-					//SummaryByCycleUtils.incrementCount(cigarValuesCount, "" + ce.getLength() + operator);
-				}
-				length += getSizeFromInt(ce.getLength()) + 1;
-			}
-			cigarLengths.increment(length);
-		}
-	}
-
-	private int getSizeFromInt(int value) {
-		if (value == 0) return 0;
-		return 1 + getSizeFromInt(value/10);
-	}
+//	private int getSizeFromInt(int value) {
+//		if (value == 0) return 0;
+//		return 1 + getSizeFromInt(value/10);
+//	}
 	
 	private void summaryToXml( Element parent ){
 		Element summaryElement = QprofilerXmlUtils.createSubElement(parent, QprofilerXmlUtils.summary);
@@ -480,9 +508,9 @@ public class BamSummaryReport2 extends SummaryReport {
 	// ///////////////////////////////////////////////////////////////////////
 	// The following methods are used by the test classes
 	// ///////////////////////////////////////////////////////////////////////
-	ConcurrentMap<String, AtomicLong> getCigarValuesCount() { 
-		return cigarValuesCount; 
-	}
+//	ConcurrentMap<String, AtomicLong> getCigarValuesCount() { 
+//		return cigarValuesCount; 
+//	}
 	ConcurrentMap<String, PositionSummary> getRNamePosition() {	
 		return rNamePosition; 
 	}
