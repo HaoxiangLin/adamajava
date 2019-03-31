@@ -153,6 +153,11 @@ public class XmlUtils {
     	ele.setAttribute( Sname, name); 
     	return ele;
     }
+    public static Element createGroupNode(Element parent, String name, Number totalcount) {
+    	Element ele = createGroupNode(  parent,   name);
+    	 ele.setAttribute( Scount, String.valueOf(totalcount));  
+    	 return ele; 
+    }
     
 	/**
 	 * <variableGroup name="name" >... </category>
