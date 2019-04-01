@@ -1,5 +1,6 @@
 package org.qcmg.qprofiler2.summarise;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,6 +12,7 @@ import org.qcmg.common.log.QLogger;
 import org.qcmg.common.log.QLoggerFactory;
 import org.qcmg.common.model.QCMGAtomicLongArray;
 import org.qcmg.common.util.QprofilerXmlUtils;
+import org.qcmg.qprofiler2.summarise.PairSummary.Pair;
 import org.qcmg.qprofiler2.util.XmlUtils;
 import org.w3c.dom.Element;
 
@@ -20,7 +22,7 @@ import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
 
 public class ReadGroupSummary {
-	protected QLogger logger = QLoggerFactory.getLogger(getClass());
+//	protected QLogger logger = QLoggerFactory.getLogger(getClass());
 	private long errNo = 0 ;
 	public final static int errReadLimit  = 10;	
 	//xml node name 	
@@ -57,6 +59,9 @@ public class ReadGroupSummary {
 	QCMGAtomicLongArray readLength = new QCMGAtomicLongArray(128);		
 //	QCMGAtomicLongArray isize = new QCMGAtomicLongArray(PairSummary.middleTlenValue);	 //store count bwt [0, 1499]
 	private final ConcurrentMap<String, AtomicLong> cigarValuesCount = new ConcurrentHashMap<String, AtomicLong>();
+	//must be concurrent set for multi threads
+//	Set<PairSummary> pairCategory = Collections.newSetFromMap(new ConcurrentHashMap<PairSummary, Boolean>());
+	private final ConcurrentMap<Integer, PairSummary> pairCategory = new ConcurrentHashMap<>();
 
 	AtomicInteger max_isize = new AtomicInteger(); 	
 	//bad reads inforamtion
@@ -66,12 +71,10 @@ public class ReadGroupSummary {
 	AtomicLong unmapped  = new AtomicLong();
 	AtomicLong unpaired  = new AtomicLong();
 	
-	AtomicLong nonCanonical  = new AtomicLong();
+//	AtomicLong nonCanonical  = new AtomicLong();
 	AtomicLong failedVendorQuality  = new AtomicLong();
 	AtomicLong inputReadCounts  = new AtomicLong();
 	
-	Set<PairSummary> pairCategory = new HashSet<>();
-	 
 	
 	//for combined readgroups, since max read length maybe different
 	//below value will be reset on preSummary() inside readsSummary2Xml()
@@ -115,7 +118,21 @@ public class ReadGroupSummary {
 	
 	public long getnonCanonicalBase() {
 		return readGroupId .equals( QprofilerXmlUtils.All_READGROUP ) ? 
-			this.nonCanonicalBase : this.nonCanonical.get() * this.maxReadLength;
+			this.nonCanonicalBase : getnonCanonicalReadsCount() * this.maxReadLength;
+	}
+	/**
+	 * 
+	 * @return the sum of reads marked as not proper pair
+	 */
+	public long getnonCanonicalReadsCount() {
+		long sum = 0;
+		for(PairSummary p : pairCategory.values()) {
+			if(p.isProperPair == false) {
+				sum += p.getFirstOfPairCounts();
+				sum += p.getSecondOfPairCounts();
+			}
+		}
+		return sum; 		
 	}
 	
 	public long getTrimmedBase() {
@@ -163,39 +180,29 @@ public class ReadGroupSummary {
 		if(record.getDuplicateReadFlag()){
 			duplicate.incrementAndGet();
 			return false;
-		}else if(record.getReadUnmappedFlag() ){
-			unmapped.incrementAndGet();
-			return false;
-		} 
+		}
 
 
 		//check pair orientaiton, tLen, mate
-		if(record.getReadPairedFlag()) {			
+		if(record.getReadPairedFlag()) {
+			if(record.getReadUnmappedFlag() && record.getMateUnmappedFlag()) {				 
+				unmapped.incrementAndGet();
+				return false;
+			}
 			PairSummary.Pair pairType = PairSummary.getPairType(record);
 			boolean isProper = record.getProperPairFlag();
-			
-			//it will throw exception if return a new instance
-//			PairSummary newP =  pairCategory.stream().filter( p -> p.equals(new PairSummary(pairType, isProper)) )
-//					.findFirst().orElse(new PairSummary(pairType, isProper));	
-			
-			PairSummary newP =  new PairSummary(pairType, isProper);
-			PairSummary oldP = null; 
-			for(PairSummary p : pairCategory) {
-				if(p.equals(newP)) {
-					oldP = p; break;
-				}
-			}
-			if(oldP != null) {
-				oldP.parse(record);
-			}else {
-				newP.parse(record);				
-				pairCategory.add(newP);
-			}
-			
- 
-			 			
+
+			int key = isProper? pairType.id * 2 :  pairType.id;
+			if(!pairCategory.containsKey(key))
+				pairCategory.put(key, new PairSummary( pairType, isProper));				
+			PairSummary oldP = pairCategory.get(key);//PairSummary.computeIfAbsent(pairCategory, record);			 
+			oldP.parse(record);					
 		} else {
 			unpaired.incrementAndGet();
+		    if(record.getReadUnmappedFlag() ){
+				unmapped.incrementAndGet();
+				return false;
+			} 
 		}
 					
 		
@@ -239,7 +246,7 @@ public class ReadGroupSummary {
 	public QCMGAtomicLongArray getOverlapCount(){
 		QCMGAtomicLongArray overlapBase = new QCMGAtomicLongArray(PairSummary.segmentSize);	
 		
-		for(PairSummary p : pairCategory) {
+		for(PairSummary p : pairCategory.values()) {
 			if( !p.isProperPair) continue; 
 			for(int i = 0; i < PairSummary.segmentSize; i ++) {			 	
 				overlapBase.increment(i, p.getoverlapCounts().get(i) );					 
@@ -262,7 +269,16 @@ public class ReadGroupSummary {
 		for (int i = 1 ; i < readLength.length() ; i++)	{		 
 			totalRead += readLength.get(i);
 		}
-		return totalRead + duplicate.get() + unmapped.get() + nonCanonical.get() ;		
+		return totalRead + duplicate.get() + unmapped.get() + getnonCanonicalReadsCount() ;		
+	}
+	
+	public int getAveReadLength(){
+		long totalgoodRead = 0 , totalgoodBase = 0;
+		for (int i = 1 ; i < readLength.length() ; i++){ 			 
+			totalgoodBase += i * readLength.get(i);
+			totalgoodRead += readLength.get(i);
+		}		
+		return ( totalgoodRead == 0 )? 0 :(int) (totalgoodBase / totalgoodRead);		
 	}
 		
 	/**
@@ -274,10 +290,7 @@ public class ReadGroupSummary {
 		//maxReadLength is continuelly updated during parseRecord
 				
 		//number of reads excluds discarded one.
-		long no = duplicate.get() + unmapped.get() + nonCanonical.get() ;
-		for (int i = 1 ; i <= this.maxReadLength ; i++)			 
-			no += readLength.get(i);		
-		this.noOfCountedReads = no;
+		this.noOfCountedReads = getCountedReads();
 		
 		//add value to All_READGROUP manually since the readLength are different for each readGroup
 		if( readGroupId.equals(QprofilerXmlUtils.All_READGROUP) ) {	 			
@@ -295,7 +308,7 @@ public class ReadGroupSummary {
 		//suppose original reads with same length for same read group
 		//the counts should be same to the sumOf QCMGAtomicLongArray from parseTrim(...)
 		long totalBase = 0;		
-		no = 0;
+		long no = 0;
 		for (int i = 1 ; i < this.maxReadLength ; i++){ 			 
 			totalBase += i * readLength.get(i);
 			no += readLength.get(i);
@@ -326,7 +339,7 @@ public class ReadGroupSummary {
 		//long noOfRecords = getCountedReads( );
 		badReadStats( rgElement, node_duplicate, duplicate.get(), getDuplicateBase()   );
 		badReadStats( rgElement, node_unmapped, unmapped.get(), getUnmappedBase() );		
-		badReadStats( rgElement, node_nonCanonicalPair, nonCanonical.get(),  getnonCanonicalBase());
+		badReadStats( rgElement, node_nonCanonicalPair, getnonCanonicalReadsCount(),  getnonCanonicalBase());
 				
 		long lostBase = getDuplicateBase() + getUnmappedBase()+ getnonCanonicalBase();
 		
@@ -345,7 +358,7 @@ public class ReadGroupSummary {
 		//create node for overall
 		Element overallEle = XmlUtils.createGroupNode(rgElement, QprofilerXmlUtils.overall );
 		XmlUtils.outputValueNode( overallEle, "readMaxLength", this.maxReadLength  );
-		
+		XmlUtils.outputValueNode( overallEle, "readAveLength",getAveReadLength());
 		//readCount
 		String comment = sreadCount + ": includes duplicateReads, nonCanonicalPairs and unmappedReads but excludes discardedReads (failed, secondary and supplementary).";
 		overallEle.appendChild( overallEle.getOwnerDocument().createComment(comment) );				
@@ -378,7 +391,7 @@ public class ReadGroupSummary {
 		//add to xml RG_Counts
 		Element ele =  XmlUtils.createMetricsNode( parent, "properPairs", null );
 		long sum = 0;
-		for(PairSummary p : pairCategory) {
+		for(PairSummary p : pairCategory.values()) {
 			if( p.isProperPair) {
 				p.toSummaryXml(ele);	
 				sum += p.getPairCounts();
@@ -388,7 +401,7 @@ public class ReadGroupSummary {
 		
 		ele =  XmlUtils.createMetricsNode( parent, "notProperPairs", null );
 		sum = 0;
-		for(PairSummary p : pairCategory) {
+		for(PairSummary p : pairCategory.values()) {
 			if(! p.isProperPair) {
 				p.toSummaryXml(ele);
 				sum += p.getPairCounts();
@@ -429,7 +442,7 @@ public class ReadGroupSummary {
 	}
 	
 	public void pairTlen2Xml( Element parent ) {		
-		for(PairSummary p : pairCategory) {
+		for(PairSummary p : pairCategory.values()) {
 			if( p.isProperPair) {
 				p.toTlenXml(parent);				
 			}			

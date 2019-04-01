@@ -353,35 +353,12 @@ public class BamSummaryReport2 extends SummaryReport {
 		final int mapQ = record.getMappingQuality();
 		mapQualityLengths[order].increment(mapQ);
 
-		// only TAGS, FLAGS, and CIGARS are always summarised
-//		parseCigar(record.getCigar());		
+		// only TAGS, FLAGS are always summarised
 		tagReport.parseTAGs(record);
 		flagIntegerCount.increment(record.getFlags());
 		
 	}
-	
-//	void parseCigar(Cigar cigar) {
-//		if (null != cigar) {
-//			int length = 0;
-//
-//			for (CigarElement ce : cigar.getCigarElements()) {
-//				CigarOperator operator = ce.getOperator();
-//				if ( ! CigarOperator.M.equals(operator)) {
-//					String key = "" + ce.getLength() + operator;
-//					cigarValuesCount.computeIfAbsent(key, k -> new AtomicLong(0)).incrementAndGet();					
-//					//SummaryByCycleUtils.incrementCount(cigarValuesCount, "" + ce.getLength() + operator);
-//				}
-//				length += getSizeFromInt(ce.getLength()) + 1;
-//			}
-//			cigarLengths.increment(length);
-//		}
-//	}
-
-//	private int getSizeFromInt(int value) {
-//		if (value == 0) return 0;
-//		return 1 + getSizeFromInt(value/10);
-//	}
-	
+		
 	private void summaryToXml( Element parent ){
 		Element summaryElement = QprofilerXmlUtils.createSubElement(parent, QprofilerXmlUtils.summary);
 					

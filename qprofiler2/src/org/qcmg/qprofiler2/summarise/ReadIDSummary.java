@@ -207,8 +207,10 @@ public class ReadIDSummary {
 	}
 
 	private <T> void updateMap(ConcurrentMap<T, AtomicLong> map , T key) {
-		AtomicLong al = map.computeIfAbsent(key, k-> new AtomicLong());	
-		al.incrementAndGet();		 
+		//AtomicLong al = map.computeIfAbsent(key, k-> new AtomicLong());	
+		if(!map.containsKey(key))
+			map.put(key, new AtomicLong()); 			
+		 map.get(key).incrementAndGet();		 	 
 	}	
 
 	/**
@@ -241,9 +243,9 @@ public class ReadIDSummary {
 				
 		getPairInfo(params[4]);
 		//all updateMap should be after exeption check to avoid invalid read information stored accidently
-		updateMap(instruments, machineAndReadPosition[0]);				
+		updateMap(instruments, machineAndReadPosition[0]);
 		updateMap(flowCellIds, flowCellAndRunId[0]);
-		updateMap(runIds, flowCellAndRunId[1]);		
+		updateMap(runIds, flowCellAndRunId[1]);
 		updateMap(flowCellLanes, params[1]);
 		updateMap(tileNumbers,  params[2] );
 		
